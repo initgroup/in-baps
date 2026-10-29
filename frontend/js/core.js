@@ -29,8 +29,22 @@ export {showMessage as toast,closeLayer as closeModal} from './layers.js';
 import {showMessage as toast,openLayer,closeLayer as closeModal} from './layers.js';
 export function modal(html){openLayer(html);icons();}
 export function modalHead(eyebrow,title){return `<div class="modal-head"><div class="layer-handle" tabindex="0" role="button" aria-label="팝업 이동: 드래그 또는 방향키"><span class="eyebrow">${eyebrow}</span><h2>${title}</h2><span class="move-hint"><i data-lucide="move"></i>드래그하여 이동 · 방향키 지원</span></div><button type="button" class="icon-button" data-close aria-label="닫기"><i data-lucide="x"></i></button></div>`;}
-export async function refreshData(){state.datasets=await api('/datasets');state.visualizations=state.modules.includes('V-BAP')?await api('/visualizations'):[];if(!state.selected||!state.datasets.some(d=>d.id===state.selected)){state.selected=state.datasets[0]?.id;}await loadSelected();}
-export async function loadSelected(){state.dataError='';if(!state.selected){state.rows=[];state.dataset=null;return;}try{const data=await api('/datasets/'+encodeURIComponent(state.selected)+'?limit=20000');state.rows=data.rows||[];state.dataset=data;}catch(error){state.rows=[];state.dataset=state.datasets.find(d=>d.id===state.selected)||null;state.dataError=error.message;if(error.status!==401)toast('데이터 조회 실패: '+error.message,true);}}
+export async function refreshData({loadRows=true}={}){
+ const generation=state.authGeneration||0;
+ const [datasets,visualizations]=await Promise.all([api('/datasets'),state.modules.includes('V-BAP')?api('/visualizations'):Promise.resolve([])]);
+ if(generation!==(state.authGeneration||0)||!state.user)return;
+ state.datasets=datasets;state.visualizations=visualizations;
+ if(!state.selected||!datasets.some(d=>d.id===state.selected))state.selected=datasets[0]?.id;
+ if(loadRows)await loadSelected();
+}
+let selectedRequest=0;
+export async function loadSelected(){
+ const request=++selectedRequest,generation=state.authGeneration||0,selected=state.selected;
+ const current=()=>request===selectedRequest&&generation===(state.authGeneration||0)&&selected===state.selected&&!!state.user;
+ state.dataError='';if(!selected){state.rows=[];state.dataset=null;return;}
+ try{const data=await api('/datasets/'+encodeURIComponent(selected)+'?limit=20000');if(!current())return;state.rows=data.rows||[];state.dataset=data;}
+ catch(error){if(!current())return;state.rows=[];state.dataset=state.datasets.find(d=>d.id===selected)||null;state.dataError=error.message;if(error.status!==401)toast('데이터 조회 실패: '+error.message,true);}
+}
 export function datasetSelect(id='dataset-select'){return `<select id="${id}" aria-label="데이터셋 선택">${state.datasets.length?state.datasets.map(d=>`<option value="${esc(d.id)}" ${state.selected===d.id?'selected':''}>${esc(d.name)}</option>`).join(''):'<option value="">데이터셋 없음</option>'}</select>`;}
 export function pageHead(eyebrow,title,description,actions=''){return `<section class="page-heading"><div class="page-heading-copy"><div class="page-title-line"><h1>${title}</h1>${eyebrow?`<span class="eyebrow">${eyebrow}</span>`:''}</div>${description?`<p>${description}</p>`:''}</div>${actions?`<div class="heading-actions">${actions}</div>`:''}</section>`;}
 export const empty=(title,description,action='')=>`<div class="empty-state"><i data-lucide="layers-3"></i><h3>${title}</h3><p>${description}</p>${action}</div>`;

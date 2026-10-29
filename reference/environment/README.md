@@ -54,12 +54,15 @@ API 회귀검사용 패키지는 다음과 같이 설치합니다. Render 런타
 | `BAPS_SECRET_KEY` | TARGET 비밀번호 암호화, 최소 32자·안정적으로 보관 |
 | `BAPS_SESSION_IDLE_MINUTES` | 유휴 만료, 기본 30분 |
 | `BAPS_SESSION_MAX_HOURS` | 최대 세션 수명, 기본 8시간 |
+| `BAPS_SYSTEM_POOL_MAX` | 프로세스별 SYSTEM Oracle 연결 상한, 기본 4·1~16, 변경 후 재시작 |
 | `BAPS_ALLOWED_HOSTS`, `BAPS_PUBLIC_ORIGIN` | 허용 호스트와 정확한 공개 출처 |
 | `BAPS_MODULES` | C-BAP/R-BAP/V-BAP 독립 활성화 |
 
 `.env.example`에는 빈 비밀값과 설정 이름만 둡니다. 기존 `.env`·wallet은 로컬 비공개이며 Git에 포함하지 않습니다. 기존 제품 계정·연결·업무 행을 자동 복제하지 않습니다. 현재 초기 관리자 안내는 `secrets/initial-admin.txt`에 생성하며 화면·로그·저장소로 노출하지 않습니다.
 
 TARGET은 로그인한 회원이 DB 연결 설정에서 등록합니다. 비밀번호는 SYSTEM DB에서 암호화하여 보관하고 서버만 복호화합니다. 암호화 키를 새 값으로 교체하면 기존 암호문은 읽을 수 없으므로 DB 복구와 함께 키의 별도 복구 절차를 유지합니다.
+
+SYSTEM 연결 풀은 첫 연결 이후 재사용하며, 최대 대기는 15초, 여분의 유휴 연결 정리는 300초입니다. 최소 연결 1개와 문장 캐시 50개를 사용하고 60초 이상 유휴 연결은 드라이버의 상태 확인을 거칩니다. 서버 worker가 여러 개면 각 프로세스가 별도의 풀을 가지므로 전체 연결 상한은 worker 수와 함께 계산합니다. 회원별 TARGET 연결은 이 풀과 분리합니다. 기존 고정 `oracledb==3.4.2`의 기능을 사용하며 추가 패키지 설치는 필요하지 않습니다.
 
 ## DB 설치
 

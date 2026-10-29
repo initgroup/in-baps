@@ -148,8 +148,37 @@ test('membership login roundtrip, role menus and explicit session extension',asy
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
 });
 
+async function verifyStartupRequests(page){
+ await expect(page.locator('#trend-chart canvas')).toBeVisible();
+ await route(page,'M90002','DB 연결 설정');
+ const details=[];page.on('request',request=>{if(/\/api\/datasets\/[^/?]+\?/.test(request.url()))details.push(request.url());});
+ let datasetStarted,visualizationStarted,release;
+ const datasetsPending=new Promise(resolve=>datasetStarted=resolve);
+ const visualizationsPending=new Promise(resolve=>visualizationStarted=resolve);
+ const gate=new Promise(resolve=>release=resolve);
+ await page.route('**/api/datasets',async route=>{datasetStarted();await gate;await route.continue();});
+ await page.route('**/api/visualizations',async route=>{visualizationStarted();await gate;await route.continue();});
+ const reload=page.reload();
+ try{
+  // Neither request can complete until both have started; sequential loading fails.
+  await Promise.all([datasetsPending,visualizationsPending]);
+ }finally{release();}
+ await reload;await expect(page.locator('#connections-page')).toBeVisible();
+ await expect(page.locator('#page-loading')).not.toBeVisible();
+ expect(details,'Metadata-only entry does not query the selected TARGET').toHaveLength(0);
+ await page.unroute('**/api/datasets');await page.unroute('**/api/visualizations');
+ await route(page,'M00001','인법스 개요');await expect(page.locator('#trend-chart canvas')).toBeVisible();
+ expect(details,'Overview queries fresh rows once').toHaveLength(1);
+ details.length=0;
+ await page.reload();await expect(page.locator('#trend-chart canvas')).toBeVisible();
+ await expect(page.locator('#page-loading')).not.toBeVisible();
+ expect(details,'Login/session entry queries selected rows once').toHaveLength(1);
+ await route(page,'M02001','R-BAP 데이터 분석');
+ expect(details,'A later data screen still reads fresh rows').toHaveLength(2);
+}
+
 test('explicit dashboard data, filters, desktop/mobile layout and member menu routes',async({page})=>{
- await explicitDataset(page);await selectDataset(page,fixtureName);
+ await explicitDataset(page);await verifyStartupRequests(page);await route(page,'M00001','인법스 개요');await selectDataset(page,fixtureName);
  for(const id of ['trend-chart','composition-chart','heat-chart'])await expect(page.locator('#'+id+' canvas')).toBeVisible();
  await page.locator('#region-filter').selectOption({label:'서울'});await expect(page.locator('.metric-value').first()).toContainText('2');
  await page.locator('#region-filter').selectOption('all');await page.locator('#period-filter').selectOption('7');await expect(page.locator('.metric-value').first()).toContainText('2');

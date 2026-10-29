@@ -5,7 +5,38 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from functools import lru_cache
+from threading import Lock
 from backend import config
+
+_pool = None
+_pool_lock = Lock()
+
+
+def system_pool():
+    """One bounded, thread-safe pool per worker, used only for SYSTEM metadata."""
+    global _pool
+    with _pool_lock:
+        if _pool is None:
+            import oracledb
+            try:
+                maximum = int(config.setting('BAPS_SYSTEM_POOL_MAX', '4'))
+            except ValueError:
+                maximum = 4
+            _pool = oracledb.create_pool(
+                **config.oracle_connect_args(), min=1, max=max(1, min(maximum, 16)),
+                increment=1, getmode=oracledb.POOL_GETMODE_TIMEDWAIT,
+                wait_timeout=15000, timeout=300, ping_interval=60, stmtcachesize=50,
+            )
+        return _pool
+
+
+def close_pool():
+    """Called after requests drain at application shutdown."""
+    global _pool
+    with _pool_lock:
+        if _pool is not None:
+            _pool.close()
+            _pool = None
 
 
 def utcnow():
@@ -27,11 +58,9 @@ def statements():
 
 
 @contextmanager
-def connection():
+def connection(*, commit=True):
     if config.STORAGE == 'oracle':
-        import oracledb
-        conn = oracledb.connect(**config.oracle_connect_args())
-        conn.call_timeout = 15000
+        conn = system_pool().acquire()
     elif config.STORAGE == 'sqlite':
         config.DATA_DIR.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(str(config.DATA_DIR / 'inbaps.db'), timeout=15)
@@ -39,8 +68,11 @@ def connection():
     else:
         raise RuntimeError('BAPS_STORAGE must be sqlite or oracle.')
     try:
+        if config.STORAGE == 'oracle':
+            conn.call_timeout = 15000
         yield conn
-        conn.commit()
+        if commit:
+            conn.commit()
     except Exception:
         conn.rollback()
         raise
@@ -56,13 +88,18 @@ def initialize():
 
 
 def query(sql_id, params=None, write=False):
-    with connection() as conn:
+    # A SELECT does not need a COMMIT network round trip. Pool release rolls
+    # back any outstanding transaction; callers with writes still commit.
+    with connection(commit=write) as conn:
         cursor = conn.cursor()
         try:
             if config.STORAGE == 'oracle' and params and 'payload' in params:
                 import oracledb
                 cursor.setinputsizes(payload=oracledb.DB_TYPE_CLOB)
-            cursor.execute(statements()[sql_id], params or {})
+            # SYSTEM JSON is already consumed in full. Fetch CLOB text with the
+            # result batch instead of issuing a LOB.read() round trip per row.
+            fetch_options = {'fetch_lobs': False} if config.STORAGE == 'oracle' and not write else {}
+            cursor.execute(statements()[sql_id], params or {}, **fetch_options)
             if write:
                 return cursor.rowcount
             names = [column[0].lower() for column in cursor.description]
@@ -89,6 +126,12 @@ def json_document(value):
 
 def list_records(kind, owner):
     return [json_document(row['payload']) for row in query('RECORD_LIST', dict(kind=kind, owner=owner))]
+
+
+def list_dataset_metadata(owner):
+    """Remove stored row arrays in SQL before transferring/parsing catalog JSON."""
+    sql_id = 'DATASET_LIST_SQLITE' if config.STORAGE == 'sqlite' else 'DATASET_LIST'
+    return [json_document(row['payload']) for row in query(sql_id, {'owner': owner})]
 
 
 def get_record(kind, owner, record_id):

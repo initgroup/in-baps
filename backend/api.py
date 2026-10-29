@@ -9,7 +9,7 @@ from starlette.concurrency import run_in_threadpool
 from backend import config
 from backend.analytics import analyze, clean_rows
 from backend.auth import public_user, require_admin, require_user
-from backend.database import connection, get_record, list_records, put_record, query, utcnow
+from backend.database import connection, get_record, list_dataset_metadata, list_records, put_record, query, utcnow
 from backend.target_database import materialize_dataset
 from backend.target_api import import_dataset_rows
 
@@ -93,7 +93,7 @@ def health():
 
 @router.get('/datasets')
 def datasets(user=Depends(require_user)):
-    return success([metadata(row) for row in list_records('dataset', user['id'])])
+    return success(list_dataset_metadata(user['id']))
 
 
 @router.post('/datasets', status_code=201)

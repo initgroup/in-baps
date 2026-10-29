@@ -10,7 +10,7 @@ from backend.api import router
 from backend.auth_api import router as auth_router
 from backend.target_api import router as target_router
 from backend.auth import initialize_admin
-from backend.database import initialize
+from backend.database import close_pool, initialize
 from backend.middleware import BodyLimitMiddleware
 
 logger = logging.getLogger('inbaps')
@@ -21,9 +21,12 @@ async def lifespan(app):
     config.public_origin()
     if config.ENVIRONMENT == 'production' and not config.COOKIE_SECURE:
         raise RuntimeError('Production requires BAPS_COOKIE_SECURE=true.')
-    initialize()
-    initialize_admin()
-    yield
+    try:
+        initialize()
+        initialize_admin()
+        yield
+    finally:
+        close_pool()
 
 
 app = FastAPI(title='IN-BAPS API', version='0.2.0', lifespan=lifespan, docs_url='/docs' if config.ENVIRONMENT == 'development' else None, redoc_url=None, openapi_url='/openapi.json' if config.ENVIRONMENT == 'development' else None)

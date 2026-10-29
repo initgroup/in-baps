@@ -71,7 +71,7 @@ class JsonStorageTests(unittest.TestCase):
                             expected_id = 'RECORD_LIST'
                             expected_binds = {'kind': 'dataset', 'owner': self.user['id']}
                         self.assertEqual(result, self.dataset if operation == 'get' else [self.dataset])
-                        cursor.execute.assert_called_once_with(database.statements()[expected_id], expected_binds)
+                        cursor.execute.assert_called_once_with(database.statements()[expected_id], expected_binds, fetch_lobs=False)
                     if representation == 'lob':
                         self.assertEqual(raw.read_count, 1)
 
@@ -81,6 +81,17 @@ class JsonStorageTests(unittest.TestCase):
             self.assertEqual(cursor.execute.call_args.args[1]['owner'], self.user['id'])
         with system_rows(['PAYLOAD'], []):
             self.assertEqual(database.list_records('dataset', self.user['id']), [])
+
+    def test_metadata_projection_accepts_native_text_and_lob_without_dropping_other_fields(self):
+        for representation in ('native', 'text', 'lob'):
+            with self.subTest(representation=representation):
+                document = {**self.dataset, 'description': 'x' * 5000, 'optional': None}
+                raw = stored_document(document, representation)
+                with system_rows(['PAYLOAD'], [(raw,)]) as cursor:
+                    self.assertEqual(database.list_dataset_metadata(self.user['id']), [document])
+                    cursor.execute.assert_called_once_with(database.statements()['DATASET_LIST'], {'owner': self.user['id']}, fetch_lobs=False)
+                if representation == 'lob':
+                    self.assertEqual(raw.read_count, 1)
 
     def assert_public_connection(self, public):
         self.assertEqual(set(public), {
@@ -105,7 +116,7 @@ class JsonStorageTests(unittest.TestCase):
                     self.assert_public_connection(target.public_connection(record))
                     cursor.execute.assert_called_once_with(database.statements()['CONNECTION_GET'], {
                         'id': 'json-regression-target', 'owner': self.user['id'],
-                    })
+                    }, fetch_lobs=False)
                 # The connection-list endpoint also passes raw rows directly to the serializer.
                 row = dict(zip([column.lower() for column in columns], [
                     'json-regression-target', 'Customer DB',
