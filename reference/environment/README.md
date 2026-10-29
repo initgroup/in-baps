@@ -89,6 +89,10 @@ baps-db-export
 
 Render 기본 공개 출처는 `RENDER_EXTERNAL_HOSTNAME`에서 구성합니다. 사용자 도메인은 정확한 HTTPS origin을 명시합니다. wallet 파일은 Render의 비밀 파일로 별도 등록하고 `DB_WALLET_PATH`를 맞춥니다. 저장소나 정적 자산에 올리지 않습니다.
 
+현재 Oracle Thin + TNS 별칭 접속은 Secret Files에 `tnsnames.ora`와 `ewallet.pem`을 각각 등록하고 `DB_WALLET_PATH=/etc/secrets`, `DB_ORACLE_MODE=thin`, `DB_MODE=cloud`로 설정합니다. `DB_WALLET_PASSWORD`는 DB 계정 비밀번호가 아닌 Wallet 비밀번호입니다. 환경변수만 등록해도 로컬 Wallet 파일이 Render에 전달되는 것은 아닙니다. 저장 후 새 배포가 완료되어야 변경이 적용됩니다.
+
+읽기 전용 DB 진단은 `python scripts/check_database.py`로 실행합니다. 설정의 존재 여부·Wallet 파일 존재 여부·Oracle 연결·회원/세션 테이블 접근만 확인하며 비밀번호와 설정값은 출력하지 않습니다. `/api/health`는 웹 프로세스의 생존 확인이므로 DB 접속 성공을 보장하지 않습니다.
+
 SYSTEM 설치·quota·회원 생성이 준비되어야 정상 서비스를 사용할 수 있습니다. Git/Render 설정 파일을 준비한 사실을 실제 push·공개 배포 성공으로 간주하지 않습니다. 현재 공개 배포는 검증 완료 상태가 아닙니다.
 
 ## 단축 명령·백업
