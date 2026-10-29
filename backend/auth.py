@@ -203,6 +203,10 @@ def rate_limit_login(request):
 def same_origin(request):
     origin = request.headers.get('origin')
     allowed = {str(request.base_url).rstrip('/')}
+    # TLS terminates at Render. Accept HTTPS for this exact, explicitly allowed
+    # request host even when the upstream ASGI connection uses HTTP.
+    if config.ENVIRONMENT == 'production' and request.url.hostname in config.allowed_hosts():
+        allowed.add('https://' + request.url.netloc)
     public = config.public_origin()
     if public:
         allowed.add(public)

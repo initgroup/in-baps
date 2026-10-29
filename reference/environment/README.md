@@ -91,7 +91,7 @@ baps-db-export
 - 실제 `BAPS_ALLOWED_HOSTS`, 필요 시 공개 HTTPS `BAPS_PUBLIC_ORIGIN`
 - 새로운 관리자 비밀번호·안정적인 암호화 키·Oracle 연결 비밀값
 
-Render 기본 공개 출처는 `RENDER_EXTERNAL_HOSTNAME`에서 구성합니다. 사용자 도메인은 정확한 HTTPS origin을 명시합니다. wallet 파일은 Render의 비밀 파일로 별도 등록하고 `DB_WALLET_PATH`를 맞춥니다. 저장소나 정적 자산에 올리지 않습니다.
+Render는 `BAPS_ALLOWED_HOSTS=inbaps.com,www.inbaps.com,in-baps.onrender.com`, `BAPS_PUBLIC_ORIGIN=https://www.inbaps.com`을 사용합니다. 공개 출처 미설정 시 `RENDER_EXTERNAL_HOSTNAME`을 사용합니다. 운영 코드도 두 사용자 도메인을 정확히 허용하며 HTTPS 종료 프록시 뒤의 같은 호스트 요청을 검증합니다. 임의 하위 도메인은 허용하지 않습니다. 도메인을 바꾸면 해당 호스트에서 다시 로그인하며 SYSTEM/TARGET Oracle 설정과 Wallet은 기존 서비스 설정을 공유합니다. wallet 파일은 Render의 비밀 파일로 별도 등록하고 `DB_WALLET_PATH`를 맞춥니다. 저장소나 정적 자산에 올리지 않습니다.
 
 현재 Oracle Thin + TNS 별칭 접속은 Secret Files에 `tnsnames.ora`와 `ewallet.pem`을 각각 등록하고 `DB_WALLET_PATH=/etc/secrets`, `DB_ORACLE_MODE=thin`, `DB_MODE=cloud`로 설정합니다. `DB_WALLET_PASSWORD`는 DB 계정 비밀번호가 아닌 Wallet 비밀번호입니다. 환경변수만 등록해도 로컬 Wallet 파일이 Render에 전달되는 것은 아닙니다. 저장 후 새 배포가 완료되어야 변경이 적용됩니다.
 

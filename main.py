@@ -31,11 +31,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title='IN-BAPS API', version='0.2.0', lifespan=lifespan, docs_url='/docs' if config.ENVIRONMENT == 'development' else None, redoc_url=None, openapi_url='/openapi.json' if config.ENVIRONMENT == 'development' else None)
-hosts = [h.strip() for h in config.setting('BAPS_ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',') if h.strip()]
-render_host = config.setting('RENDER_EXTERNAL_HOSTNAME')
-if render_host:
-    hosts.append(render_host)
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.allowed_hosts(), www_redirect=False)
 app.add_middleware(BodyLimitMiddleware, max_bytes=config.MAX_BYTES + 65536)
 
 

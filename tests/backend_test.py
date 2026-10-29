@@ -80,6 +80,52 @@ class BackendTests(unittest.TestCase):
             with self.assertRaises(HTTPException):
                 same_origin(request('https://evil.example'))
 
+    def test_production_domains_login_and_database_requests(self):
+        from fastapi import FastAPI
+        from starlette.middleware.trustedhost import TrustedHostMiddleware
+        from backend.auth_api import router as auth_router
+        from backend.api import router as api_router
+        env = {'BAPS_ALLOWED_HOSTS': 'localhost', 'BAPS_PUBLIC_ORIGIN': 'https://www.inbaps.com',
+               'RENDER_EXTERNAL_HOSTNAME': 'in-baps.onrender.com'}
+        with patch.dict(os.environ, env), patch.object(config, 'ENVIRONMENT', 'production'), patch.object(config, 'COOKIE_SECURE', True):
+            deployed = FastAPI()
+            deployed.include_router(auth_router)
+            deployed.include_router(api_router)
+            deployed.add_middleware(TrustedHostMiddleware, allowed_hosts=config.allowed_hosts(), www_redirect=False)
+            for host in ('www.inbaps.com', 'inbaps.com', 'in-baps.onrender.com'):
+                with self.subTest(host=host), TestClient(deployed, base_url='https://' + host) as client:
+                    origin = {'Origin': 'https://' + host, 'Sec-Fetch-Site': 'same-origin'}
+                    login = client.post('/api/auth/login', headers=origin, json={
+                        'username': 'test-admin', 'password': 'backend-test-password-2026!'})
+                    self.assertEqual(login.status_code, 200, login.text)
+                    self.assertIn('Secure', login.headers['set-cookie'])
+                    self.assertNotIn('Domain=', login.headers['set-cookie'])
+                    self.assertEqual(client.get('/api/datasets').status_code, 200)
+                    csrf = {'X-CSRF-Token': login.json()['data']['csrf_token']}
+                    self.assertEqual(client.post('/api/auth/activity', headers=origin).status_code, 403)
+                    self.assertEqual(client.post('/api/auth/activity', headers={**origin, **csrf}).status_code, 200)
+                    self.assertEqual(client.post('/api/auth/activity', headers={**csrf, 'Origin': 'https://evil.example'}).status_code, 403)
+                    self.assertEqual(client.post('/api/auth/logout', headers={**origin, **csrf}).status_code, 200)
+            for host in ('evil.example', 'www.inbaps.com.evil.example', 'unregistered.inbaps.com'):
+                self.assertEqual(TestClient(deployed, base_url='https://' + host).get('/api/health').status_code, 400)
+
+    def test_custom_domain_origin_behind_http_proxy(self):
+        from starlette.requests import Request
+        from fastapi import HTTPException
+        with patch.dict(os.environ, {'BAPS_PUBLIC_ORIGIN': '', 'RENDER_EXTERNAL_HOSTNAME': 'in-baps.onrender.com'}), patch.object(config, 'ENVIRONMENT', 'production'):
+            for host in ('www.inbaps.com', 'inbaps.com', 'in-baps.onrender.com'):
+                def request(origin, site='same-origin'):
+                    return Request({'type': 'http', 'scheme': 'http', 'server': (host, 80), 'path': '/',
+                                    'root_path': '', 'query_string': b'', 'headers': [
+                                        (b'host', host.encode()), (b'origin', origin.encode()),
+                                        (b'sec-fetch-site', site.encode())]})
+                same_origin(request('https://' + host))
+                for origin in ('https://' + host + '.evil.example', 'https://evil.example', 'https://' + host + ':8443'):
+                    with self.assertRaises(HTTPException):
+                        same_origin(request(origin))
+                with self.assertRaises(HTTPException):
+                    same_origin(request('https://' + host, 'cross-site'))
+
     def test_independent_modules_and_roundtrip(self):
         old = config.ENABLED_MODULES
         try:

@@ -28,6 +28,20 @@ MAX_COLUMNS = 100
 ENABLED_MODULES = {v.strip().upper() for v in setting('BAPS_MODULES', 'C-BAP,R-BAP,V-BAP').split(',')}
 
 
+def allowed_hosts():
+    hosts = [host.strip() for host in setting('BAPS_ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',') if host.strip()]
+    # Keep the service's registered domains working with older Render env values.
+    if ENVIRONMENT == 'production':
+        hosts.extend(('inbaps.com', 'www.inbaps.com'))
+    render_host = setting('RENDER_EXTERNAL_HOSTNAME')
+    if render_host:
+        hosts.append(render_host)
+    public = public_origin()
+    if public:
+        hosts.append(urlsplit(public).hostname)
+    return list(dict.fromkeys(hosts))
+
+
 def public_origin():
     value = setting('BAPS_PUBLIC_ORIGIN')
     if not value and setting('RENDER_EXTERNAL_HOSTNAME'):

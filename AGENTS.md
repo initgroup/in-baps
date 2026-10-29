@@ -93,6 +93,7 @@
 - Git 원격 `origin`은 `https://github.com/initgroup/in-baps.git`, 기본 브랜치는 `main`이다. 배포 스크립트의 기본 저장소와 문서 주소를 함께 유지한다.
 - Render Build Command는 `bash scripts/render-build.sh`, Start Command는 `uvicorn main:app --host 0.0.0.0 --port $PORT`다. 사용자가 지정한 명령과 `render.yaml`·운영 문서를 일치시킨다.
 - 로컬 서비스 기본 주소는 `http://127.0.0.1:9000`이다. Render의 `$PORT`와 별도로 관리한다.
+- 운영 사용자 도메인은 `www.inbaps.com`, `inbaps.com`이며 Render 기본 주소도 유지한다. 호스트 허용과 HTTPS 프록시 출처 검증을 함께 관리하고 임의 하위 도메인 허용이나 CSRF 해제를 사용하지 않는다. API는 접속 도메인의 `/api`를 사용하며 SYSTEM/TARGET 설정은 도메인과 분리한다.
 - IN-BAPS 시스템 오브젝트는 `INIT$_<유형>_BAPS_<이름>`이다. 테이블 `INIT$_TB_BAPS_*`, 프로시저 `INIT$_SP_BAPS_*`, 뷰 `INIT$_VW_BAPS_*`, 인덱스 `INIT$_IX_BAPS_*`, 제약 `INIT$_PK/UK/FK/CK_BAPS_*` 규칙을 사용한다. M90003에서 사용자가 생성하는 TARGET 테이블·컬럼·제약에는 이 명명 규칙을 강제하지 않는다. 입력 이름을 안전하게 인용하며 DB 식별자의 유효성·길이·권한과 SYSTEM 오브젝트 보호는 유지한다. 고객 기존 오브젝트와 IN-EDITAONE 오브젝트를 임의로 이름 변경·삭제하지 않는다.
 - Oracle 초기/신규 생성은 `database/DDL/`, 기존 오브젝트 변경은 `database/ALT/`, 기준 데이터·데이터 보정은 `database/DML/`의 `V###__description.sql`에 기록한다. 세 폴더 전체에서 버전 번호가 유일해야 한다. 적용된 파일을 수정하지 않고 다음 버전을 추가한다.
 - 앱 SQL은 `database/SQL/`에서 인증·카탈로그·관리 기능으로 나누고, 수동 관리 SQL은 `database/OPS/`에 둔다. `*.sql.example`은 실행하지 않는다.

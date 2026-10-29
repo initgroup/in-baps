@@ -23,7 +23,9 @@ services:
       - key: MKL_NUM_THREADS
         value: "1"
       - key: BAPS_ALLOWED_HOSTS
-        sync: false
+        value: inbaps.com,www.inbaps.com,in-baps.onrender.com
+      - key: BAPS_PUBLIC_ORIGIN
+        value: https://www.inbaps.com
       - key: BAPS_ADMIN_USER
         sync: false
       - key: BAPS_ADMIN_PASSWORD
