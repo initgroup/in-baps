@@ -1,0 +1,24 @@
+{
+  "tables": {
+    "INBAPS_SCHEMA_HISTORY": {
+      "columns": [["VERSION","VARCHAR2",100],["CHECKSUM","VARCHAR2",64],["APPLIED_AT","VARCHAR2",40],["STATUS","VARCHAR2",20]],
+      "constraints": [["INBAPS_PK_HISTORY","P","VERSION",""],["INBAPS_CK_MIG_STATUS","C","","STATUS IN ('RUNNING','APPLIED')"]]
+    },
+    "INBAPS_USERS": {
+      "columns": [["ID","VARCHAR2",32],["USERNAME","VARCHAR2",100],["DISPLAY_NAME","VARCHAR2",150],["PASSWORD_HASH","VARCHAR2",300],["ROLE","VARCHAR2",20],["CREATED_AT","VARCHAR2",40]],
+      "constraints": [["INBAPS_PK_USERS","P","ID",""],["INBAPS_UK_USERNAME","U","USERNAME",""],["INBAPS_CK_USER_ROLE","C","","ROLE IN ('admin','analyst')"]]
+    },
+    "INBAPS_SESSIONS": {
+      "columns": [["TOKEN_HASH","VARCHAR2",64],["USER_ID","VARCHAR2",32],["CSRF_TOKEN","VARCHAR2",100],["EXPIRES_AT","NUMBER",0]],
+      "constraints": [["INBAPS_PK_SESSIONS","P","TOKEN_HASH",""],["INBAPS_FK_SESSION_USER","R","USER_ID","INBAPS_USERS:ID"]]
+    },
+    "INBAPS_RECORDS": {
+      "columns": [["ID","VARCHAR2",32],["KIND","VARCHAR2",30],["OWNER_ID","VARCHAR2",32],["PAYLOAD","CLOB",0],["CREATED_AT","VARCHAR2",40]],
+      "constraints": [["INBAPS_PK_RECORDS","P","ID",""],["INBAPS_FK_RECORD_OWNER","R","OWNER_ID","INBAPS_USERS:ID"],["INBAPS_CK_RECORD_JSON","C","","PAYLOAD IS JSON"],["INBAPS_CK_RECORD_KIND","C","","KIND IN ('dataset','analysis','visualization','dashboard')"]]
+    }
+  },
+  "indexes": {
+    "INBAPS_IX_SESSION_EXP": ["INBAPS_SESSIONS","EXPIRES_AT"],
+    "INBAPS_IX_RECORD_OWNER": ["INBAPS_RECORDS","OWNER_ID,KIND"]
+  }
+}

@@ -1,0 +1,46 @@
+/* Shared display scale for prominent section headings across every page family. */
+
+.section-heading h2,
+.product-intro h2,
+.corp-heading h2,
+.corp-team-copy h2,
+.sol-section-heading h2,
+.sol-product-card h3,
+.ib-module h2,
+.editorial-heading h2,
+.contact-cta h2,
+.corp-career-contact h2,
+.corp-contact-final h2 {
+    font-size: var(--section-title-size);
+    line-height: 1.16;
+}
+
+/* Preferred Korean phrase breaks; shorter screens can wrap within each phrase. */
+h1.heading-lines,
+h2.heading-lines,
+h3.heading-lines {
+    max-width: none;
+    word-break: keep-all;
+    overflow-wrap: normal;
+}
+
+.heading-lines > .heading-line { display: block; }
+html[lang="en"] .heading-lines > .heading-line { display: inline; }
+
+@media (max-width: 50rem) {
+    .heading-lines--responsive > .heading-line { display: inline; }
+
+    .section-heading h2,
+    .product-intro h2,
+    .corp-heading h2,
+    .corp-team-copy h2,
+    .sol-section-heading h2,
+    .sol-product-card h3,
+    .ib-module h2,
+    .editorial-heading h2,
+    .contact-cta h2,
+    .corp-career-contact h2,
+    .corp-contact-final h2 {
+        line-height: 1.14;
+    }
+}

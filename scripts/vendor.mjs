@@ -1,0 +1,13 @@
+import {mkdir, copyFile, cp} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const out=path.join(root,'frontend/vendor');
+await mkdir(out,{recursive:true});
+await copyFile(path.join(root,'node_modules/echarts/dist/echarts.min.js'),path.join(out,'echarts.min.js'));
+await copyFile(path.join(root,'node_modules/echarts/LICENSE'),path.join(out,'ECHARTS-LICENSE.txt'));
+await copyFile(path.join(root,'node_modules/echarts/NOTICE'),path.join(out,'ECHARTS-NOTICE.txt'));
+await copyFile(path.join(root,'node_modules/lucide/dist/umd/lucide.min.js'),path.join(out,'lucide.min.js'));
+await copyFile(path.join(root,'node_modules/lucide/LICENSE'),path.join(out,'LUCIDE-LICENSE.txt'));
+await cp(path.join(root,'node_modules/@fontsource-variable/noto-sans-kr'),path.join(out,'font'),{recursive:true});
+console.log('Local chart, icon and font assets prepared.');

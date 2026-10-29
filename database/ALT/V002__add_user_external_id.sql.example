@@ -1,0 +1,6 @@
+-- EXAMPLE ONLY. Rename and review only when this actual schema change is needed.
+-- Never modify a file after it has been applied.
+ALTER TABLE INIT$_TB_BAPS_MEMBER ADD (
+    EXTERNAL_ID VARCHAR2(100 CHAR)
+)
+/

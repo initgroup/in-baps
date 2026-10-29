@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="IN-BAPS · INIT-Bigdata Analysis Platform System. 수집에서 분석, 시각화까지 연결하는 데이터 의사결정 플랫폼">
+  <title>IN-BAPS · INIT-Bigdata Analysis Platform System</title>
+  <meta name="application-name" content="IN-BAPS">
+  <meta name="theme-color" content="#162333">
+  <meta name="apple-mobile-web-app-title" content="IN-BAPS">
+  <link rel="icon" type="image/x-icon" sizes="16x16 24x24 32x32 48x48 64x64 128x128 256x256" href="/favicon.ico?v=2">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="/static/assets/favicon.svg?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/assets/apple-touch-icon.png?v=2">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="stylesheet" href="/static/vendor/font/index.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script defer src="/static/vendor/echarts.min.js"></script>
+  <script defer src="/static/vendor/lucide.min.js"></script>
+  <script type="module" src="/static/js/app.js"></script>
+</head>
+<body class="signed-out">
+<a class="skip-link" href="#main">본문 바로가기</a>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-scroll">
+    <div class="sidebar-heading"><a class="brand" href="#M00001" aria-label="IN-BAPS 홈 · INIT-Bigdata Analysis Platform System" title="INIT-Bigdata Analysis Platform System"><span class="brand-symbol"><i></i><i></i><i></i></span><span class="brand-label">IN-BAPS<small>INIT-Bigdata Analysis <span>Platform System</span></small></span></a><button id="sidebar-close" class="icon-button" type="button" aria-label="메뉴 닫기"><i data-lucide="x"></i></button></div>
+    <nav id="navigation" aria-label="주 메뉴"></nav>
+  </div>
+  <div class="sidebar-bottom"><button class="profile" id="user-profile" aria-label="로그아웃" title="로그아웃"><span class="avatar">IN</span><span id="user-label">인법스<small>세션 확인 중</small></span><span class="profile-action"><i data-lucide="log-out"></i><span>로그아웃</span></span></button></div>
+</aside>
+<div id="sidebar-backdrop" hidden aria-hidden="true"></div>
+<div class="app-shell">
+  <header class="topbar"><div class="breadcrumbs"><button id="mobile-menu" class="icon-button" aria-label="메뉴 접기" aria-controls="sidebar" aria-expanded="true"><i data-lucide="panel-left-close"></i></button><i data-lucide="house"></i><span>/</span><b id="breadcrumb">인법스 개요</b></div><div class="top-actions"><button class="search-trigger" id="global-search"><i data-lucide="search"></i><span>데이터셋 검색</span><kbd>/</kbd></button><button class="session-clock" id="extend-session" title="클릭하면 로그인 세션을 연장합니다"><i data-lucide="timer"></i><span id="session-remaining">--:--</span><span class="session-action">연장</span></button><span class="mode-badge" id="mode-label">연결 중</span><button class="icon-button" id="help-button" aria-label="플랫폼 안내"><i data-lucide="circle-help"></i></button><span class="avatar small">IN</span></div></header>
+  <main id="main" tabindex="-1"><div class="loading"><span class="spinner"></span>인법스를 준비하고 있습니다.</div></main>
+  <footer>IN-BAPS <span>INIT-Bigdata Analysis Platform System</span><span>INIT GROUP © 2026</span></footer>
+</div>
+<dialog id="modal"><div id="modal-content"></div></dialog>
+<div id="toast-region" popover="manual" aria-label="알림 메시지"></div>
+<div id="progress-region" popover="manual" aria-label="작업 진행 상황"></div>
+<dialog id="page-loading" aria-labelledby="page-loading-title" aria-describedby="page-loading-status" tabindex="-1">
+  <div class="loading-identity"><h2 id="page-loading-title"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>IN-BAPS</h2><span class="loading-signal" aria-hidden="true"><i></i>PROCESSING</span></div>
+  <div class="loading-visual" aria-hidden="true">
+    <svg viewBox="0 0 400 136" fill="none">
+      <path class="loading-grid" d="M0 34H400M0 68H400M0 102H400M40 0V136M104 0V136M168 0V136M232 0V136M296 0V136M360 0V136"/>
+      <path class="loading-route" d="M32 30H85C125 30 125 68 160 68M32 68H160M32 106H85C125 106 125 68 160 68M240 68H270L283 46L300 88L317 35L334 76L347 68H380"/>
+      <path class="loading-flow" d="M32 30H85C125 30 125 68 160 68M32 68H160M32 106H85C125 106 125 68 160 68M240 68H270L283 46L300 88L317 35L334 76L347 68H380"/>
+      <circle class="loading-halo" cx="200" cy="68" r="49"/>
+      <circle class="loading-orbit" cx="200" cy="68" r="40"/>
+      <circle class="loading-core" cx="200" cy="68" r="31"/>
+      <path class="loading-mark" d="M186 78V68M200 78V59M214 78V49"/>
+      <g class="loading-nodes"><circle cx="32" cy="30" r="4"/><circle cx="32" cy="68" r="4"/><circle cx="32" cy="106" r="4"/><circle cx="380" cy="68" r="4"/></g>
+    </svg>
+  </div>
+  <p id="page-loading-status" role="status" aria-live="polite">화면을 준비하고 있습니다.</p>
+  <div class="page-loading-meter" aria-hidden="true"><span></span></div>
+  <div class="loading-caption" aria-hidden="true"><span>DATA INTELLIGENCE</span><span>C-BAP · R-BAP · V-BAP</span></div>
+</dialog>
+</body></html>

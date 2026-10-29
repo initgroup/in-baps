@@ -1,0 +1,44 @@
+# Create a NEW IN-BAPS Render service; do not attach this blueprint to IN-EDITAONE.
+services:
+  - type: web
+    name: in-baps
+    runtime: python
+    buildCommand: bash scripts/render-build.sh
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.9
+      - key: BAPS_ENV
+        value: production
+      - key: BAPS_STORAGE
+        value: oracle
+      - key: BAPS_COOKIE_SECURE
+        value: "true"
+      - key: BAPS_ALLOWED_HOSTS
+        sync: false
+      - key: BAPS_ADMIN_USER
+        sync: false
+      - key: BAPS_ADMIN_PASSWORD
+        sync: false
+      - key: BAPS_SECRET_KEY
+        sync: false
+      - key: BAPS_SESSION_IDLE_MINUTES
+        value: "30"
+      - key: BAPS_SESSION_MAX_HOURS
+        value: "8"
+      - key: DB_MODE
+        value: cloud
+      - key: DB_USER_CLD
+        sync: false
+      - key: DB_PASSWORD_CLD
+        sync: false
+      - key: DB_DSN_CLD
+        sync: false
+      - key: DB_ORACLE_MODE
+        value: thin
+      - key: DB_WALLET_PATH
+        value: /etc/secrets
+      - key: DB_WALLET_PASSWORD
+        sync: false

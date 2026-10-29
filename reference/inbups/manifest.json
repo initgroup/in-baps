@@ -1,0 +1,166 @@
+[
+  {
+    "url": "https://initgroup.kr/assets/images/reference/in-baps/c-bap-collection.png",
+    "file": "c-bap-collection.png",
+    "bytes": 184700,
+    "sha256": "67526eb5ca9a80cd117710e02cbb1cfa64173bb4983ecdc01fd3897388cbaf39",
+    "dimensions": [
+      1067,
+      749
+    ]
+  },
+  {
+    "url": "https://initgroup.kr/assets/images/reference/in-baps/r-bap-analysis.png",
+    "file": "r-bap-analysis.png",
+    "bytes": 201065,
+    "sha256": "8487a728321f6894a321e30f998fa1da6c4444521663bf89fb17bb78488cf779",
+    "dimensions": [
+      1056,
+      615
+    ]
+  },
+  {
+    "url": "https://initgroup.kr/assets/images/reference/in-baps/v-bap-visualization.png",
+    "file": "v-bap-visualization.png",
+    "bytes": 341601,
+    "sha256": "9606c2b546fd3b1c341e6ac0bb33b1a840cb70a19192abe2ae875acbd59493ba",
+    "dimensions": [
+      1055,
+      807
+    ]
+  },
+  {
+    "url": "https://initgroup.kr/assets/js/common.js?v=e38b7183e09e193c",
+    "file": "common.js",
+    "bytes": 40029,
+    "sha256": "e38b7183e09e193c6de20b7ff12d0ad01aa56f40b8cf0dc875b0a6a0a676d48a"
+  },
+  {
+    "url": "https://initgroup.kr/assets/shared/site.json",
+    "file": "assets__shared__site.json",
+    "bytes": 43990,
+    "sha256": "b5c67a1dbffc94466c80a8253def3779b1a65515e0ce51dc2cd43f79cf5ada24"
+  },
+  {
+    "url": "https://initgroup.kr/assets/shared/layout.html",
+    "file": "assets__shared__layout.html",
+    "bytes": 7160,
+    "sha256": "525100684fa6a5749c52f90253fd9f68fc8126249454631aa8d861ab72a3bc13"
+  },
+  {
+    "url": "https://initgroup.kr/assets/css/site.css",
+    "file": "assets__css__site.css",
+    "bytes": 108656,
+    "sha256": "c07348cb400690c6b95771df7fec330e441ad167a64ee079fc60694015dce61f"
+  },
+  {
+    "url": "https://initgroup.kr/assets/css/solutions.css",
+    "file": "assets__css__solutions.css",
+    "bytes": 82978,
+    "sha256": "2a7e8a56358d4144e2b09d68a81f348d2a7a4d89c6008ffef956da599723b22a"
+  },
+  {
+    "url": "https://initgroup.kr/assets/css/page-hero.css",
+    "file": "assets__css__page-hero.css",
+    "bytes": 2663,
+    "sha256": "4b813cb6152e2fee50c53e9ca226c2b927746c601ab1ff3aa3217213de9fa29d"
+  },
+  {
+    "url": "https://initgroup.kr/assets/css/page-headings.css",
+    "file": "assets__css__page-headings.css",
+    "bytes": 1124,
+    "sha256": "3cdc4b472b7178233c86cdd4a368d3d780ff8e36c972b9e98476f2eed97018a1"
+  },
+  {
+    "url": "https://initgroup.kr/assets/css/menu-hero.css",
+    "file": "assets__css__menu-hero.css",
+    "bytes": 11082,
+    "sha256": "ba18b44de91344915381c6e76962c9159343204f272dcd5d1befbf86760098ba"
+  },
+  {
+    "url": "https://initgroup.kr/assets/css/i18n.css",
+    "file": "assets__css__i18n.css",
+    "bytes": 995,
+    "sha256": "77858c7ddf3a03718592a2fff9c0612f04ad2090dde034f121f8f4dd46fa6163"
+  },
+  {
+    "url": "https://initgroup.kr/assets/brand-2026/design.css",
+    "file": "assets__brand-2026__design.css",
+    "bytes": 20640,
+    "sha256": "f1b8cd91b48cc0f2490813262782d20dca7c68f2cf023ded37ebe06094e0e18a"
+  },
+  {
+    "url": "https://initgroup.kr/assets/images/brand/init-logo.png",
+    "file": "assets__images__brand__init-logo.png",
+    "bytes": 48535,
+    "sha256": "5c12d6bdfcacb1e47559a7a1c1e8bdb3ecca9f4684a97d4a9c70066ed94c666a",
+    "dimensions": [
+      3048,
+      861
+    ]
+  },
+  {
+    "url": "https://initgroup.kr/assets/brand-2026/solutions.webp",
+    "file": "assets__brand-2026__solutions.webp",
+    "bytes": 117432,
+    "sha256": "af001ccd0998fb06e62e67d370ebd2a3436b826bf02c08f021e2886c94b10a3c",
+    "dimensions": [
+      1672,
+      941
+    ]
+  },
+  {
+    "url": "https://initgroup.kr/assets/images/section-backgrounds/solutions-operating-path-dark.png",
+    "file": "assets__images__section-backgrounds__solutions-operating-path-dark.png",
+    "bytes": 1398598,
+    "sha256": "4d18e238d5d98c07f4e18cba69c5731f97eb1e0451cfabcb97c71420a0356f7c",
+    "dimensions": [
+      1672,
+      941
+    ]
+  },
+  {
+    "url": "https://initgroup.kr/assets/images/menu-heroes/solutions-hero-desktop-v2.png",
+    "file": "assets__images__menu-heroes__solutions-hero-desktop-v2.png",
+    "bytes": 1620162,
+    "sha256": "2077a9f719e89e0748e9a88deff02cf1e7515ecb2bdb48aa3ddf6eefec23e089",
+    "dimensions": [
+      1672,
+      941
+    ]
+  },
+  {
+    "url": "https://initgroup.kr/assets/images/design-system/wave-lines.svg",
+    "file": "assets__images__design-system__wave-lines.svg",
+    "bytes": 1465,
+    "sha256": "8797f4c76585cf1dd2297613ad8786c849b7d8060a849507cf2d7d511650b2de"
+  },
+  {
+    "url": "https://initgroup.kr/assets/images/design-system/grid-dark.svg",
+    "file": "assets__images__design-system__grid-dark.svg",
+    "bytes": 236,
+    "sha256": "9d37eb51437fad52df1ead6cbdbb197ea886699fcdcbf1fb3013b6d5e24007b8"
+  },
+  {
+    "url": "https://initgroup.kr/assets/brand-2026/design.js",
+    "file": "assets__brand-2026__design.js",
+    "bytes": 5100,
+    "sha256": "a98da9803aa92b9e03d0dd7c261a9d2db9aca4dd46c09faac2d618a6d138c7d2"
+  },
+  {
+    "url": "https://initgroup.kr/solutions/inbups/index.html",
+    "file": "index.html",
+    "bytes": 24581,
+    "sha256": "57aea43c218f64da75e45dd5a30829051536d026939e557034a6fbe287f5b5d5"
+  },
+  {
+    "url": "user-provided attachment",
+    "file": "user-pipeline-reference.PNG",
+    "bytes": 47967,
+    "sha256": "05430df2853d4be8b3eb1331ab251c236664116f4bde2a8fcbaf5275308feb08",
+    "dimensions": [
+      722,
+      428
+    ]
+  }
+]

@@ -1,0 +1,5 @@
+CREATE TABLE {table} (
+  "BAPS_ROW_ID" NUMBER(16) NOT NULL,
+  {columns},
+  CONSTRAINT {constraint} PRIMARY KEY ("BAPS_ROW_ID")
+)

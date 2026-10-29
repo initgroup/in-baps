@@ -1,0 +1,145 @@
+{
+  "schema": "INIT$BASE03",
+  "exported_at": "2026-10-29T05:21:55+00:00",
+  "objects": [
+    {
+      "name": "INIT$_IX_BAPS_CONN_OWNER",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_IX_BAPS_CONN_OWNER.sql"
+    },
+    {
+      "name": "INIT$_IX_BAPS_RECORD_OWNER",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_IX_BAPS_RECORD_OWNER.sql"
+    },
+    {
+      "name": "INIT$_IX_BAPS_SESSION_EXP",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_IX_BAPS_SESSION_EXP.sql"
+    },
+    {
+      "name": "INIT$_PK_BAPS_0E0E9905B976",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_PK_BAPS_0E0E9905B976.sql"
+    },
+    {
+      "name": "INIT$_PK_BAPS_2B3A70A04C8C",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_PK_BAPS_2B3A70A04C8C.sql"
+    },
+    {
+      "name": "INIT$_PK_BAPS_CONNECTION",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_PK_BAPS_CONNECTION.sql"
+    },
+    {
+      "name": "INIT$_PK_BAPS_D67E2EA9431C",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_PK_BAPS_D67E2EA9431C.sql"
+    },
+    {
+      "name": "INIT$_PK_BAPS_HISTORY",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_PK_BAPS_HISTORY.sql"
+    },
+    {
+      "name": "INIT$_PK_BAPS_MEMBER",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_PK_BAPS_MEMBER.sql"
+    },
+    {
+      "name": "INIT$_PK_BAPS_RECORD",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_PK_BAPS_RECORD.sql"
+    },
+    {
+      "name": "INIT$_PK_BAPS_SESSION",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_PK_BAPS_SESSION.sql"
+    },
+    {
+      "name": "INIT$_UK_BAPS_USERNAME",
+      "type": "INDEX",
+      "status": "VALID",
+      "file": "index__INIT$_UK_BAPS_USERNAME.sql"
+    },
+    {
+      "name": "INIT$_SP_BAPS_SESSION_PURGE",
+      "type": "PROCEDURE",
+      "status": "VALID",
+      "file": "procedure__INIT$_SP_BAPS_SESSION_PURGE.sql"
+    },
+    {
+      "name": "INIT$_TB_BAPS_CONNECTION",
+      "type": "TABLE",
+      "status": "VALID",
+      "file": "table__INIT$_TB_BAPS_CONNECTION.sql"
+    },
+    {
+      "name": "INIT$_TB_BAPS_C_0E0E9905B976",
+      "type": "TABLE",
+      "status": "VALID",
+      "file": "table__INIT$_TB_BAPS_C_0E0E9905B976.sql"
+    },
+    {
+      "name": "INIT$_TB_BAPS_C_D67E2EA9431C",
+      "type": "TABLE",
+      "status": "VALID",
+      "file": "table__INIT$_TB_BAPS_C_D67E2EA9431C.sql"
+    },
+    {
+      "name": "INIT$_TB_BAPS_HISTORY",
+      "type": "TABLE",
+      "status": "VALID",
+      "file": "table__INIT$_TB_BAPS_HISTORY.sql"
+    },
+    {
+      "name": "INIT$_TB_BAPS_MEMBER",
+      "type": "TABLE",
+      "status": "VALID",
+      "file": "table__INIT$_TB_BAPS_MEMBER.sql"
+    },
+    {
+      "name": "INIT$_TB_BAPS_QA_3F8CFE0AE594",
+      "type": "TABLE",
+      "status": "VALID",
+      "file": "table__INIT$_TB_BAPS_QA_3F8CFE0AE594.sql"
+    },
+    {
+      "name": "INIT$_TB_BAPS_RECORD",
+      "type": "TABLE",
+      "status": "VALID",
+      "file": "table__INIT$_TB_BAPS_RECORD.sql"
+    },
+    {
+      "name": "INIT$_TB_BAPS_SESSION",
+      "type": "TABLE",
+      "status": "VALID",
+      "file": "table__INIT$_TB_BAPS_SESSION.sql"
+    },
+    {
+      "name": "INIT$_VW_BAPS_CATALOG",
+      "type": "VIEW",
+      "status": "VALID",
+      "file": "view__INIT$_VW_BAPS_CATALOG.sql"
+    }
+  ],
+  "history": {
+    "V001__baseline.sql": {
+      "checksum": "5c48572fea008ddce6ca89879bc41b711665eb672a9e62c47926675fd34c9243",
+      "applied_at": "2026-10-29T05:16:05+00:00",
+      "status": "APPLIED"
+    }
+  }
+}
