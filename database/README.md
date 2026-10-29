@@ -10,7 +10,7 @@
 @D:/work/in-baps/database/DDL/install_oracle.sql
 ```
 
-`V001__baseline.sql`은 이력 원본이므로 수동 반복 실행용이 아닙니다. 설치 파일은 V001·계약·템플릿으로부터 생성되며 기존 업무 행을 삭제하지 않습니다.
+`V001__baseline.sql`, `V002__open_api_collection.sql`은 이력 원본이므로 수동 반복 실행용이 아닙니다. 설치 파일은 현재 DDL 버전·계약·템플릿으로부터 생성되며 기존 업무 행을 삭제하지 않습니다. 이미 V001을 사용 중이면 `backend.migrate apply --schema 대상스키마`로 V002만 추가할 수 있습니다.
 
 준비 조건은 Oracle 19c 이상, 일반 애플리케이션 스키마, `CREATE SESSION`, `CREATE TABLE`, `CREATE VIEW`, `CREATE PROCEDURE`와 기본 테이블스페이스의 쓰기 quota입니다. SYS/SYSTEM 또는 로그인 계정과 CURRENT_SCHEMA가 다른 상태는 허용하지 않습니다. quota는 DBA가 확인된 계정과 테이블스페이스에 부여합니다. 앱은 권한이나 quota를 스스로 부여하지 않습니다.
 
@@ -21,9 +21,9 @@
 1. 대상 스키마·권한·기본 테이블스페이스 quota를 먼저 확인합니다.
 2. 없는 테이블·제약·인덱스를 생성하고 기존 컬럼의 타입·길이·NULL 조건과 제약 정의를 검사합니다.
 3. 뷰·세션 정리 프로시저 정의를 적용하고 유효 상태를 확인합니다.
-4. `INIT$_TB_BAPS_HISTORY`의 V001 체크섬·상태를 검사하고 초기 설치 이력을 기록합니다. 이미 완료된 이력은 중복 기록하거나 적용 시각을 바꾸지 않습니다.
+4. `INIT$_TB_BAPS_HISTORY`의 V001/V002 체크섬·상태를 검사하고 해당 설치 이력을 기록합니다. 이미 완료된 이력은 중복 기록하거나 적용 시각을 바꾸지 않습니다.
 
-데이터 삭제, DROP/TRUNCATE, 기존 제품 테이블 이름 변경은 하지 않습니다. 호환되지 않는 기존 구조, 다른 체크섬, 후속 버전 이력이 있으면 중단합니다. 여러 설치 세션을 동시에 실행하지 마세요. Oracle DDL은 암묵적으로 커밋되므로 설치는 업무 트랜잭션과 분리한 연결에서 수행합니다.
+데이터 삭제, DROP/TRUNCATE, 기존 제품 테이블 이름 변경은 하지 않습니다. 호환되지 않는 기존 구조, 다른 체크섬, 이 설치본이 알지 못하는 후속 버전 이력이 있으면 중단합니다. 여러 설치 세션을 동시에 실행하지 마세요. Oracle DDL은 암묵적으로 커밋되므로 설치는 업무 트랜잭션과 분리한 연결에서 수행합니다.
 
 ```powershell
 .\venv\Scripts\python.exe -m backend.migrate plan
@@ -47,15 +47,18 @@ IN-BAPS 시스템 오브젝트 형식은 `INIT$_<유형>_BAPS_<이름>`입니다
 | 인덱스 | `INIT$_IX_` | `INIT$_IX_BAPS_CONN_OWNER` |
 | 기본 키 / 유일 / 외래 키 / 검사 | `INIT$_PK_/UK_/FK_/CK_` | `INIT$_PK_BAPS_MEMBER` |
 
-SYSTEM 테이블은 다음 5개입니다.
+SYSTEM 테이블은 다음 8개입니다.
 
 - `INIT$_TB_BAPS_MEMBER`: 회원 ID·로그인 아이디·표시 이름·암호 해시·역할.
 - `INIT$_TB_BAPS_SESSION`: 세션 토큰 해시·회원·CSRF·최대 만료·유휴 만료·마지막 활동.
 - `INIT$_TB_BAPS_CONNECTION`: 회원별 TARGET 연결과 암호화한 비밀번호·쓰기 허용·관리 테이블 목록.
 - `INIT$_TB_BAPS_RECORD`: 데이터셋 정의/직접 입력·분석 결과·시각화·대시보드 JSON.
 - `INIT$_TB_BAPS_HISTORY`: 버전 파일·SHA-256·적용 시각·상태.
+- `INIT$_TB_BAPS_API_SOURCE`: 소유 API 설정·암호화 인증값·TARGET 매핑·실행 잠금.
+- `INIT$_TB_BAPS_API_JOB`: 소유 API의 실행 간격·다음 실행 시각·활성 여부.
+- `INIT$_TB_BAPS_API_RUN`: 수동/배치 실행 상태·시각·저장 건수·결과 메시지.
 
-3개 인덱스, 카탈로그 뷰, 세션 정리 프로시저 및 각 제약조건도 파일로 관리합니다. C-BAP의 자동 관리 테이블은 TARGET에 `INIT$_TB_BAPS_C_<식별자>` 이름으로 생성됩니다.
+7개 명시적 인덱스, 카탈로그 뷰, 세션 정리 프로시저 및 각 제약조건도 파일로 관리합니다. V002는 소유 API 조회·실행 예정 배치·회원별 실행 이력·소스별 실행 상태 인덱스 4개를 추가합니다. C-BAP의 자동 관리 테이블은 TARGET에 `INIT$_TB_BAPS_C_<식별자>` 이름으로 생성됩니다. API 수집은 `INIT$_TB_BAPS_C_API_<식별자>` 테이블에 실행 ID·행 번호 복합 PK, 수집 시각, 레코드 원문 CLOB과 매핑 컬럼을 저장합니다.
 
 M90003의 사용자 테이블은 `SALES`, `TB_CUSTOMER` 등 원하는 이름으로 생성할 수 있으며 `INIT$_TB_` 접두어·대문자 규칙을 강제하지 않습니다. 컬럼 역시 사용자 이름을 그대로 인용하고, 기본 키 제약 이름은 Oracle이 자동 부여합니다. 소문자·한글·공백을 포함한 이름도 입력할 수 있으며 SQL에서 이름을 큰따옴표로 감싸 사용합니다. 오브젝트 선택 시 작업실은 이름을 인용한 SQL을 만듭니다. 식별자 길이(UTF-8 128바이트)·DB 자체 문법·권한·SYSTEM 보호는 적용합니다. 사용자 오브젝트의 생성·변경 SQL도 동일하게 파일에 기록합니다.
 
@@ -69,7 +72,7 @@ M90003의 사용자 테이블은 `SALES`, `TB_CUSTOMER` 등 원하는 이름으�
 | `SQL/` | 인증·카탈로그·연결·DBMS·migration SQL | SQL ID와 바인드로 앱에서 호출 |
 | `OPS/` | 수동 점검·진단 | 자동 migration 제외 |
 
-DDL/ALT/DML의 `V###__description.sql` 번호는 전체에서 유일해야 합니다. 현재 활성 버전은 새 명명 규칙의 V001입니다. 이후 변경은 V002 이상을 추가하고 적용 파일은 수정하지 않습니다. `*.sql.example`, `*.sql.template`, `sqlite.sql`, `install_oracle.sql`은 버전 스캔 대상이 아닙니다.
+DDL/ALT/DML의 `V###__description.sql` 번호는 전체에서 유일해야 합니다. 현재 활성 버전은 V001과 V002이며 2026-10-29 실제 SYSTEM에 적용했습니다. 이후 변경은 V003 이상을 추가하고 적용 파일은 수정하지 않습니다. `*.sql.example`, `*.sql.template`, `sqlite.sql`, `install_oracle.sql`은 버전 스캔 대상이 아닙니다.
 
 `backend.migrate apply`는 각 버전을 적용하기 전에 RUNNING을 커밋하고 완료하면 APPLIED로 기록합니다. 중간 실패가 남으면 자동 재실행을 중단합니다. 부분 생성·실제 데이터·SQL을 비교해 복구한 뒤 상태를 정리해야 합니다. 중복 오브젝트 오류를 무조건 무시하지 않습니다.
 

@@ -293,8 +293,8 @@ def sql_dataset(payload: SQLDatasetInput, user=Depends(require_user)):
     return success(target.register_dataset(record, user, payload.name, payload.sql, payload.binds, payload.module, payload.limit))
 
 
-def import_dataset_rows(connection_id, rows, name, module, user):
-    return target.import_rows(target.get_connection(connection_id, user), user, name, rows, module)
+def import_dataset_rows(connection_id, rows, name, module, user, collection_type='json'):
+    return target.import_rows(target.get_connection(connection_id, user), user, name, rows, module, collection_type=collection_type)
 
 
 @router.post('/dbms/import', status_code=201)

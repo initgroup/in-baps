@@ -11,7 +11,8 @@ export function finiteNumeric(value){
  if(typeof value==='string'&&/^[-+]?0\d/.test(value.trim()))return null;
  const n=Number(value);return Number.isFinite(n)&&Math.abs(n)<=1e100?n:null;
 }
-const category=value=>value===null||value===undefined||value===''?'(결측)':String(value);
+export const categoryValue=value=>value===null||value===undefined||value===''?'(결측)':String(value);
+const category=categoryValue;
 const compareNames=(a,b)=>a<b?-1:a>b?1:0;
 const newBucket=name=>({name,sum:0,count:0,valid_count:0,min:Infinity,max:-Infinity});
 function add(bucket,value){bucket.count++;const n=finiteNumeric(value);if(n!==null){bucket.sum+=n;bucket.valid_count++;bucket.min=Math.min(bucket.min,n);bucket.max=Math.max(bucket.max,n);}return bucket;}

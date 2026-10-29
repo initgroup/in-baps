@@ -9,7 +9,7 @@ from starlette.concurrency import run_in_threadpool
 from backend import config
 from backend.analytics import analyze, clean_rows
 from backend.auth import public_user, require_admin, require_user
-from backend.database import connection, get_record, list_dataset_metadata, list_records, put_record, query, utcnow
+from backend.database import connection, get_record, json_document, list_dataset_metadata, list_records, put_record, query, utcnow
 from backend.target_database import materialize_dataset
 from backend.target_api import import_dataset_rows
 
@@ -35,11 +35,22 @@ class DatasetInput(StrictModel):
 
 class AnalysisInput(StrictModel):
     dataset_id: str
-    method: Literal['profile', 'aggregate', 'correlation', 'text']
+    method: Literal['profile', 'aggregate', 'correlation', 'text', 'descriptive', 'normality',
+                    'ttest_one', 'ttest_ind', 'ttest_paired', 'anova', 'mannwhitney', 'kruskal',
+                    'wilcoxon', 'chi_square', 'correlation_test', 'ols', 'logistic', 'pca', 'kmeans', 'reliability']
     group_by: str | None = None
     value: str | None = None
     aggregation: Literal['sum', 'mean', 'count', 'min', 'max'] = 'sum'
     columns: list[str] | None = None
+    value2: str | None = None
+    confidence: Literal[0.90, 0.95, 0.99] = 0.95
+    null_mean: float = Field(default=0, ge=-1e50, le=1e50, allow_inf_nan=False)
+    correlation_kind: Literal['pearson', 'spearman'] = 'pearson'
+    robust: bool = True
+    standardize: bool = True
+    components: int = Field(default=2, ge=1, le=20)
+    clusters: int = Field(default=3, ge=2, le=10)
+    test_fraction: float = Field(default=0.25, ge=0.1, le=0.4, allow_inf_nan=False)
 
 
 ChartType = Literal['line', 'bar', 'area', 'pie', 'scatter', 'heatmap', 'radar', 'treemap', 'sunburst', 'sankey', 'graph', 'boxplot', 'funnel', 'gauge']
@@ -78,11 +89,11 @@ def metadata(dataset):
 def save_dataset(payload, user):
     enabled(payload.module)
     if payload.connection_id:
-        return import_dataset_rows(payload.connection_id, payload.rows, payload.name, payload.module, user)
+        return import_dataset_rows(payload.connection_id, payload.rows, payload.name, payload.module, user, collection_type='file' if payload.source=='upload' else 'json')
     if payload.module == 'C-BAP':
         raise HTTPException(422, '수집 데이터를 저장할 TARGET DB를 먼저 선택하세요.')
     rows, columns = clean_rows(payload.rows)
-    dataset = dict(id=uuid.uuid4().hex, name=payload.name.strip() or '새 데이터셋', source=payload.source, module=payload.module, description=payload.description, rows=rows, row_count=len(rows), columns=columns, created_at=utcnow())
+    dataset = dict(id=uuid.uuid4().hex, name=payload.name.strip() or '새 데이터셋', source=payload.source, collection_type='file' if payload.source=='upload' else 'analysis' if payload.source=='analysis' else 'json', module=payload.module, description=payload.description, rows=rows, row_count=len(rows), columns=columns, created_at=utcnow())
     return metadata(put_record('dataset', user['id'], dataset))
 
 
@@ -186,9 +197,18 @@ def run_analysis(payload: AnalysisInput, user=Depends(require_user)):
 
 
 @router.get('/analyses')
-def analyses(user=Depends(require_user)):
+def analyses(summary: bool = False, user=Depends(require_user)):
     enabled('R-BAP')
+    if summary:
+        sql_id = 'ANALYSIS_LIST_SQLITE' if config.STORAGE == 'sqlite' else 'ANALYSIS_LIST'
+        return success([json_document(row['payload']) for row in query(sql_id, {'owner': user['id']})])
     return success(list_records('analysis', user['id']))
+
+
+@router.get('/analyses/{record_id}')
+def analysis_detail(record_id: str, user=Depends(require_user)):
+    enabled('R-BAP')
+    return success(owned('analysis', user, record_id))
 
 
 @router.get('/visualizations')

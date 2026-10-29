@@ -1,0 +1,122 @@
+{
+  "checked_at": "2026-10-29T15:13:59+00:00",
+  "candidate_count": 190,
+  "verified_count": 179,
+  "categories": {
+    "경제·성장": 10,
+    "인구·사회": 12,
+    "보건·의료": 12,
+    "행정·재정": 5,
+    "금융·물가": 24,
+    "제조·산업": 15,
+    "서비스·관광": 6,
+    "무역·국제수지": 9,
+    "도시·주거": 6,
+    "고용·노동": 8,
+    "교육·연구": 9,
+    "디지털·기술": 9,
+    "환경·기후": 11,
+    "에너지·전력": 12,
+    "농업·식량": 11,
+    "교통·물류": 6,
+    "복지·평등": 4,
+    "안전·재난": 6,
+    "해양·기상": 4
+  },
+  "providers": {
+    "World Bank": 161,
+    "한국은행 ECOS": 6,
+    "미국 지질조사국 USGS": 2,
+    "미국 해양대기청 NOAA": 4,
+    "미국 재무부 Fiscal Data": 3,
+    "미국 항공우주국 NASA": 3
+  },
+  "auth_modes": {
+    "none": 173,
+    "public-sample": 6
+  },
+  "excluded": [
+    {
+      "id": "wb-gc-dod-totl-gd-zs",
+      "title": "한국 중앙정부 부채 GDP 비중",
+      "provider": "World Bank",
+      "url": "https://api.worldbank.org/v2/country/WLD/indicator/GC.DOD.TOTL.GD.ZS",
+      "reason": "No non-missing observations"
+    },
+    {
+      "id": "wb-sg-dmk-srcr-fn-zs",
+      "title": "한국 여성의 금융계좌 보유율",
+      "provider": "World Bank",
+      "url": "https://api.worldbank.org/v2/country/WLD/indicator/SG.DMK.SRCR.FN.ZS",
+      "reason": "No non-missing observations"
+    },
+    {
+      "id": "bok-gdp",
+      "title": "한국은행 국민계정",
+      "provider": "한국은행 ECOS",
+      "url": "https://ecos.bok.or.kr/api/StatisticSearch/sample/json/kr/1/10/200Y001/A/2015/2024",
+      "reason": "JSON 레코드 경로를 찾을 수 없습니다."
+    },
+    {
+      "id": "koreanet-3",
+      "title": "대한민국 정책 공개 소식",
+      "provider": "해외문화홍보원 Korea.net",
+      "url": "https://www.korea.net/koreanet/rss/news/3",
+      "reason": "API 리디렉션은 허용하지 않습니다. 최종 HTTPS 주소를 직접 등록하세요."
+    },
+    {
+      "id": "koreanet-4",
+      "title": "대한민국 경제·산업 공개 소식",
+      "provider": "해외문화홍보원 Korea.net",
+      "url": "https://www.korea.net/koreanet/rss/news/4",
+      "reason": "API 리디렉션은 허용하지 않습니다. 최종 HTTPS 주소를 직접 등록하세요."
+    },
+    {
+      "id": "koreanet-5",
+      "title": "대한민국 과학·기술 공개 소식",
+      "provider": "해외문화홍보원 Korea.net",
+      "url": "https://www.korea.net/koreanet/rss/news/5",
+      "reason": "API 리디렉션은 허용하지 않습니다. 최종 HTTPS 주소를 직접 등록하세요."
+    },
+    {
+      "id": "koreanet-6",
+      "title": "대한민국 사회 공개 소식",
+      "provider": "해외문화홍보원 Korea.net",
+      "url": "https://www.korea.net/koreanet/rss/news/6",
+      "reason": "API 리디렉션은 허용하지 않습니다. 최종 HTTPS 주소를 직접 등록하세요."
+    },
+    {
+      "id": "koreanet-7",
+      "title": "대한민국 문화 공개 소식",
+      "provider": "해외문화홍보원 Korea.net",
+      "url": "https://www.korea.net/koreanet/rss/news/7",
+      "reason": "API 리디렉션은 허용하지 않습니다. 최종 HTTPS 주소를 직접 등록하세요."
+    },
+    {
+      "id": "koreanet-8",
+      "title": "대한민국 음식·여행 공개 소식",
+      "provider": "해외문화홍보원 Korea.net",
+      "url": "https://www.korea.net/koreanet/rss/news/8",
+      "reason": "API 리디렉션은 허용하지 않습니다. 최종 HTTPS 주소를 직접 등록하세요."
+    },
+    {
+      "id": "koreanet-9",
+      "title": "대한민국 체육 공개 소식",
+      "provider": "해외문화홍보원 Korea.net",
+      "url": "https://www.korea.net/koreanet/rss/news/9",
+      "reason": "API 리디렉션은 허용하지 않습니다. 최종 HTTPS 주소를 직접 등록하세요."
+    },
+    {
+      "id": "bok-money",
+      "title": "한국은행 통화량",
+      "provider": "한국은행 ECOS",
+      "url": "https://ecos.bok.or.kr/api/StatisticSearch/sample/json/kr/1/10/101Y004/M/202401/202410",
+      "reason": "JSON 레코드 경로를 찾을 수 없습니다."
+    }
+  ],
+  "notes": [
+    "Only successful public HTTPS calls with non-missing real observations enter the catalog.",
+    "No catalog-size upper bound. Add indicator definitions or provider candidates and refresh.",
+    "Preview refresh does not register member sources or write TARGET data."
+  ]
+}

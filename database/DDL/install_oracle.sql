@@ -38,12 +38,12 @@ DECLARE
     END IF;
   END;
 
-  PROCEDURE assert_column(p_table VARCHAR2, p_column VARCHAR2, p_type VARCHAR2, p_chars NUMBER) IS
+  PROCEDURE assert_column(p_table VARCHAR2, p_column VARCHAR2, p_type VARCHAR2, p_chars NUMBER, p_nullable VARCHAR2 DEFAULT 'N') IS
     n NUMBER;
   BEGIN
     SELECT COUNT(*) INTO n FROM user_tab_columns
      WHERE table_name = p_table AND column_name = p_column
-       AND data_type = p_type AND nullable = 'N'
+       AND data_type = p_type AND nullable = p_nullable
        AND (p_type <> 'VARCHAR2' OR (char_used = 'C' AND char_length >= p_chars))
        AND (p_type <> 'NUMBER' OR (data_precision IS NULL AND data_scale IS NULL));
     IF n <> 1 THEN
@@ -51,25 +51,43 @@ DECLARE
     END IF;
   END;
 
-  PROCEDURE assert_history IS
+  PROCEDURE assert_migration(p_version VARCHAR2, p_checksum VARCHAR2) IS
     n NUMBER;
     v_checksum VARCHAR2(64);
     v_status VARCHAR2(20);
   BEGIN
-    EXECUTE IMMEDIATE 'SELECT COUNT(*) FROM INIT$_TB_BAPS_HISTORY WHERE VERSION <> :version'
-      INTO n USING c_version;
-    IF n > 0 THEN
-      fail('Later/unknown migrations exist. Use backend.migrate apply; do not reinstall an older baseline.');
-    END IF;
     EXECUTE IMMEDIATE 'SELECT COUNT(*) FROM INIT$_TB_BAPS_HISTORY WHERE VERSION = :version'
-      INTO n USING c_version;
-    IF n > 1 THEN fail('Duplicate baseline history. Review schema history.'); END IF;
+      INTO n USING p_version;
+    IF n > 1 THEN fail('Duplicate migration history. Review schema history.'); END IF;
     IF n = 1 THEN
       EXECUTE IMMEDIATE 'SELECT CHECKSUM, STATUS FROM INIT$_TB_BAPS_HISTORY WHERE VERSION = :version'
-        INTO v_checksum, v_status USING c_version;
-      IF v_checksum <> c_checksum THEN fail('Baseline checksum mismatch. No history was replaced.'); END IF;
-      IF v_status NOT IN ('RUNNING','APPLIED') THEN fail('Unexpected baseline status.'); END IF;
+        INTO v_checksum, v_status USING p_version;
+      IF v_checksum <> p_checksum THEN fail('Migration checksum mismatch. No history was replaced.'); END IF;
+      IF v_status NOT IN ('RUNNING','APPLIED') THEN fail('Unexpected migration status.'); END IF;
     END IF;
+  END;
+
+  PROCEDURE assert_history IS
+    n NUMBER;
+  BEGIN
+    EXECUTE IMMEDIATE 'SELECT COUNT(*) FROM INIT$_TB_BAPS_HISTORY WHERE VERSION NOT IN (''V001__baseline.sql'',''V002__open_api_collection.sql'')'
+      INTO n;
+    IF n > 0 THEN fail('Unknown migrations exist. Use the matching newer checkout.'); END IF;
+    assert_migration('V001__baseline.sql', '5c48572fea008ddce6ca89879bc41b711665eb672a9e62c47926675fd34c9243');
+    assert_migration('V002__open_api_collection.sql', '2da88c560320219738e2c167b89a98210c1481fb69bcdf049de0bcb53d619349');
+  END;
+
+  PROCEDURE record_migration(p_version VARCHAR2, p_checksum VARCHAR2) IS
+  BEGIN
+    EXECUTE IMMEDIATE
+      'MERGE INTO INIT$_TB_BAPS_HISTORY t USING (SELECT :version AS version, :checksum AS checksum FROM dual) s
+         ON (t.VERSION = s.version)
+       WHEN MATCHED THEN UPDATE SET t.STATUS = ''APPLIED'', t.APPLIED_AT = :updated_at WHERE t.STATUS = ''RUNNING''
+       WHEN NOT MATCHED THEN INSERT (VERSION, CHECKSUM, APPLIED_AT, STATUS)
+         VALUES (s.version, s.checksum, :created_at, ''APPLIED'')'
+      USING p_version, p_checksum,
+            TO_CHAR(SYS_EXTRACT_UTC(SYSTIMESTAMP), 'YYYY-MM-DD"T"HH24:MI:SS') || '+00:00',
+            TO_CHAR(SYS_EXTRACT_UTC(SYSTIMESTAMP), 'YYYY-MM-DD"T"HH24:MI:SS') || '+00:00';
   END;
 
   PROCEDURE ensure_constraint(p_table VARCHAR2, p_name VARCHAR2, p_type VARCHAR2, p_columns VARCHAR2, p_rule VARCHAR2) IS
@@ -261,9 +279,95 @@ BEGIN
   ensure_constraint('INIT$_TB_BAPS_CONNECTION', 'INIT$_PK_BAPS_CONNECTION', 'P', 'ID', '');
   ensure_constraint('INIT$_TB_BAPS_CONNECTION', 'INIT$_FK_BAPS_CONN_OWNER', 'R', 'OWNER_ID', 'INIT$_TB_BAPS_MEMBER:ID');
   ensure_constraint('INIT$_TB_BAPS_CONNECTION', 'INIT$_CK_BAPS_CONN_JSON', 'C', '', 'CONFIG_JSON IS JSON');
+  ensure_table('INIT$_TB_BAPS_API_SOURCE', 'CREATE TABLE INIT$_TB_BAPS_API_SOURCE (
+    ID VARCHAR2(32 CHAR) NOT NULL,
+    OWNER_ID VARCHAR2(32 CHAR) NOT NULL,
+    NAME VARCHAR2(150 CHAR) NOT NULL,
+    CONFIG_JSON CLOB NOT NULL,
+    LOCK_TOKEN VARCHAR2(64 CHAR),
+    LOCK_UNTIL NUMBER DEFAULT 0 NOT NULL,
+    CREATED_AT VARCHAR2(40 CHAR) NOT NULL,
+    UPDATED_AT VARCHAR2(40 CHAR) NOT NULL,
+    CONSTRAINT INIT$_PK_BAPS_API_SOURCE PRIMARY KEY (ID),
+    CONSTRAINT INIT$_FK_BAPS_API_SRC_OWNER FOREIGN KEY (OWNER_ID) REFERENCES INIT$_TB_BAPS_MEMBER(ID),
+    CONSTRAINT INIT$_CK_BAPS_API_SRC_JSON CHECK (CONFIG_JSON IS JSON)
+)');
+  assert_column('INIT$_TB_BAPS_API_SOURCE', 'ID', 'VARCHAR2', 32);
+  assert_column('INIT$_TB_BAPS_API_SOURCE', 'OWNER_ID', 'VARCHAR2', 32);
+  assert_column('INIT$_TB_BAPS_API_SOURCE', 'NAME', 'VARCHAR2', 150);
+  assert_column('INIT$_TB_BAPS_API_SOURCE', 'CONFIG_JSON', 'CLOB', 0);
+  assert_column('INIT$_TB_BAPS_API_SOURCE', 'LOCK_TOKEN', 'VARCHAR2', 64, 'Y');
+  assert_column('INIT$_TB_BAPS_API_SOURCE', 'LOCK_UNTIL', 'NUMBER', 0);
+  assert_column('INIT$_TB_BAPS_API_SOURCE', 'CREATED_AT', 'VARCHAR2', 40);
+  assert_column('INIT$_TB_BAPS_API_SOURCE', 'UPDATED_AT', 'VARCHAR2', 40);
+  ensure_constraint('INIT$_TB_BAPS_API_SOURCE', 'INIT$_PK_BAPS_API_SOURCE', 'P', 'ID', '');
+  ensure_constraint('INIT$_TB_BAPS_API_SOURCE', 'INIT$_FK_BAPS_API_SRC_OWNER', 'R', 'OWNER_ID', 'INIT$_TB_BAPS_MEMBER:ID');
+  ensure_constraint('INIT$_TB_BAPS_API_SOURCE', 'INIT$_CK_BAPS_API_SRC_JSON', 'C', '', 'CONFIG_JSON IS JSON');
+  ensure_table('INIT$_TB_BAPS_API_JOB', 'CREATE TABLE INIT$_TB_BAPS_API_JOB (
+    ID VARCHAR2(32 CHAR) NOT NULL,
+    OWNER_ID VARCHAR2(32 CHAR) NOT NULL,
+    SOURCE_ID VARCHAR2(32 CHAR) NOT NULL,
+    NAME VARCHAR2(150 CHAR) NOT NULL,
+    INTERVAL_SECONDS NUMBER NOT NULL,
+    NEXT_RUN_AT NUMBER NOT NULL,
+    ENABLED NUMBER NOT NULL,
+    CREATED_AT VARCHAR2(40 CHAR) NOT NULL,
+    UPDATED_AT VARCHAR2(40 CHAR) NOT NULL,
+    CONSTRAINT INIT$_PK_BAPS_API_JOB PRIMARY KEY (ID),
+    CONSTRAINT INIT$_FK_BAPS_API_JOB_OWNER FOREIGN KEY (OWNER_ID) REFERENCES INIT$_TB_BAPS_MEMBER(ID),
+    CONSTRAINT INIT$_FK_BAPS_API_JOB_SRC FOREIGN KEY (SOURCE_ID) REFERENCES INIT$_TB_BAPS_API_SOURCE(ID),
+    CONSTRAINT INIT$_UK_BAPS_API_JOB_SRC UNIQUE (OWNER_ID,SOURCE_ID),
+    CONSTRAINT INIT$_CK_BAPS_API_JOB_ON CHECK (ENABLED IN (0,1)),
+    CONSTRAINT INIT$_CK_BAPS_API_JOB_INT CHECK (INTERVAL_SECONDS >= 300 AND INTERVAL_SECONDS <= 604800)
+)');
+  assert_column('INIT$_TB_BAPS_API_JOB', 'ID', 'VARCHAR2', 32);
+  assert_column('INIT$_TB_BAPS_API_JOB', 'OWNER_ID', 'VARCHAR2', 32);
+  assert_column('INIT$_TB_BAPS_API_JOB', 'SOURCE_ID', 'VARCHAR2', 32);
+  assert_column('INIT$_TB_BAPS_API_JOB', 'NAME', 'VARCHAR2', 150);
+  assert_column('INIT$_TB_BAPS_API_JOB', 'INTERVAL_SECONDS', 'NUMBER', 0);
+  assert_column('INIT$_TB_BAPS_API_JOB', 'NEXT_RUN_AT', 'NUMBER', 0);
+  assert_column('INIT$_TB_BAPS_API_JOB', 'ENABLED', 'NUMBER', 0);
+  assert_column('INIT$_TB_BAPS_API_JOB', 'CREATED_AT', 'VARCHAR2', 40);
+  assert_column('INIT$_TB_BAPS_API_JOB', 'UPDATED_AT', 'VARCHAR2', 40);
+  ensure_constraint('INIT$_TB_BAPS_API_JOB', 'INIT$_PK_BAPS_API_JOB', 'P', 'ID', '');
+  ensure_constraint('INIT$_TB_BAPS_API_JOB', 'INIT$_FK_BAPS_API_JOB_OWNER', 'R', 'OWNER_ID', 'INIT$_TB_BAPS_MEMBER:ID');
+  ensure_constraint('INIT$_TB_BAPS_API_JOB', 'INIT$_FK_BAPS_API_JOB_SRC', 'R', 'SOURCE_ID', 'INIT$_TB_BAPS_API_SOURCE:ID');
+  ensure_constraint('INIT$_TB_BAPS_API_JOB', 'INIT$_UK_BAPS_API_JOB_SRC', 'U', 'OWNER_ID,SOURCE_ID', '');
+  ensure_constraint('INIT$_TB_BAPS_API_JOB', 'INIT$_CK_BAPS_API_JOB_ON', 'C', '', 'ENABLED IN (0,1)');
+  ensure_constraint('INIT$_TB_BAPS_API_JOB', 'INIT$_CK_BAPS_API_JOB_INT', 'C', '', 'INTERVAL_SECONDS >= 300 AND INTERVAL_SECONDS <= 604800');
+  ensure_table('INIT$_TB_BAPS_API_RUN', 'CREATE TABLE INIT$_TB_BAPS_API_RUN (
+    ID VARCHAR2(32 CHAR) NOT NULL,
+    OWNER_ID VARCHAR2(32 CHAR) NOT NULL,
+    SOURCE_ID VARCHAR2(32 CHAR) NOT NULL,
+    JOB_ID VARCHAR2(32 CHAR),
+    STARTED_AT NUMBER NOT NULL,
+    FINISHED_AT NUMBER,
+    STATUS VARCHAR2(30 CHAR) NOT NULL,
+    RESULT_JSON CLOB NOT NULL,
+    CONSTRAINT INIT$_PK_BAPS_API_RUN PRIMARY KEY (ID),
+    CONSTRAINT INIT$_FK_BAPS_API_RUN_OWNER FOREIGN KEY (OWNER_ID) REFERENCES INIT$_TB_BAPS_MEMBER(ID),
+    CONSTRAINT INIT$_FK_BAPS_API_RUN_SRC FOREIGN KEY (SOURCE_ID) REFERENCES INIT$_TB_BAPS_API_SOURCE(ID),
+    CONSTRAINT INIT$_CK_BAPS_API_RUN_JSON CHECK (RESULT_JSON IS JSON)
+)');
+  assert_column('INIT$_TB_BAPS_API_RUN', 'ID', 'VARCHAR2', 32);
+  assert_column('INIT$_TB_BAPS_API_RUN', 'OWNER_ID', 'VARCHAR2', 32);
+  assert_column('INIT$_TB_BAPS_API_RUN', 'SOURCE_ID', 'VARCHAR2', 32);
+  assert_column('INIT$_TB_BAPS_API_RUN', 'JOB_ID', 'VARCHAR2', 32, 'Y');
+  assert_column('INIT$_TB_BAPS_API_RUN', 'STARTED_AT', 'NUMBER', 0);
+  assert_column('INIT$_TB_BAPS_API_RUN', 'FINISHED_AT', 'NUMBER', 0, 'Y');
+  assert_column('INIT$_TB_BAPS_API_RUN', 'STATUS', 'VARCHAR2', 30);
+  assert_column('INIT$_TB_BAPS_API_RUN', 'RESULT_JSON', 'CLOB', 0);
+  ensure_constraint('INIT$_TB_BAPS_API_RUN', 'INIT$_PK_BAPS_API_RUN', 'P', 'ID', '');
+  ensure_constraint('INIT$_TB_BAPS_API_RUN', 'INIT$_FK_BAPS_API_RUN_OWNER', 'R', 'OWNER_ID', 'INIT$_TB_BAPS_MEMBER:ID');
+  ensure_constraint('INIT$_TB_BAPS_API_RUN', 'INIT$_FK_BAPS_API_RUN_SRC', 'R', 'SOURCE_ID', 'INIT$_TB_BAPS_API_SOURCE:ID');
+  ensure_constraint('INIT$_TB_BAPS_API_RUN', 'INIT$_CK_BAPS_API_RUN_JSON', 'C', '', 'RESULT_JSON IS JSON');
   ensure_index('INIT$_IX_BAPS_SESSION_EXP', 'INIT$_TB_BAPS_SESSION', 'EXPIRES_AT', 'CREATE INDEX INIT$_IX_BAPS_SESSION_EXP ON INIT$_TB_BAPS_SESSION(EXPIRES_AT)');
   ensure_index('INIT$_IX_BAPS_RECORD_OWNER', 'INIT$_TB_BAPS_RECORD', 'OWNER_ID,KIND', 'CREATE INDEX INIT$_IX_BAPS_RECORD_OWNER ON INIT$_TB_BAPS_RECORD(OWNER_ID,KIND)');
   ensure_index('INIT$_IX_BAPS_CONN_OWNER', 'INIT$_TB_BAPS_CONNECTION', 'OWNER_ID', 'CREATE INDEX INIT$_IX_BAPS_CONN_OWNER ON INIT$_TB_BAPS_CONNECTION(OWNER_ID)');
+  ensure_index('INIT$_IX_BAPS_API_SRC_OWNER', 'INIT$_TB_BAPS_API_SOURCE', 'OWNER_ID', 'CREATE INDEX INIT$_IX_BAPS_API_SRC_OWNER ON INIT$_TB_BAPS_API_SOURCE(OWNER_ID)');
+  ensure_index('INIT$_IX_BAPS_API_JOB_DUE', 'INIT$_TB_BAPS_API_JOB', 'ENABLED,NEXT_RUN_AT', 'CREATE INDEX INIT$_IX_BAPS_API_JOB_DUE ON INIT$_TB_BAPS_API_JOB(ENABLED,NEXT_RUN_AT)');
+  ensure_index('INIT$_IX_BAPS_API_RUN_OWNER', 'INIT$_TB_BAPS_API_RUN', 'OWNER_ID,STARTED_AT', 'CREATE INDEX INIT$_IX_BAPS_API_RUN_OWNER ON INIT$_TB_BAPS_API_RUN(OWNER_ID,STARTED_AT)');
+  ensure_index('INIT$_IX_BAPS_API_RUN_SRC', 'INIT$_TB_BAPS_API_RUN', 'SOURCE_ID,STATUS', 'CREATE INDEX INIT$_IX_BAPS_API_RUN_SRC ON INIT$_TB_BAPS_API_RUN(SOURCE_ID,STATUS)');
   ensure_view('INIT$_VW_BAPS_CATALOG', 'CREATE OR REPLACE VIEW INIT$_VW_BAPS_CATALOG AS
 SELECT ID, OWNER_ID,
        JSON_VALUE(PAYLOAD, ''$.name'' RETURNING VARCHAR2(150)) AS DATASET_NAME,
@@ -279,17 +383,10 @@ BEGIN
   DELETE FROM INIT$_TB_BAPS_SESSION WHERE EXPIRES_AT <= P_NOW OR IDLE_EXPIRES_AT <= P_NOW;
 END;');
   EXECUTE IMMEDIATE 'COMMENT ON TABLE INIT$_TB_BAPS_RECORD IS ''IN-BAPS owned dataset definitions, analysis results and visualizations''';
-  -- Adopt a manual V001 install or complete a compatible interrupted baseline.
+  -- Adopt verified manual versions or complete compatible interrupted creation.
   -- Never modify application rows. Existing APPLIED history keeps its timestamp.
-  EXECUTE IMMEDIATE
-    'MERGE INTO INIT$_TB_BAPS_HISTORY t USING (SELECT :version AS version, :checksum AS checksum FROM dual) s
-       ON (t.VERSION = s.version)
-     WHEN MATCHED THEN UPDATE SET t.STATUS = ''APPLIED'', t.APPLIED_AT = :updated_at WHERE t.STATUS = ''RUNNING''
-     WHEN NOT MATCHED THEN INSERT (VERSION, CHECKSUM, APPLIED_AT, STATUS)
-       VALUES (s.version, s.checksum, :created_at, ''APPLIED'')'
-    USING c_version, c_checksum,
-          TO_CHAR(SYS_EXTRACT_UTC(SYSTIMESTAMP), 'YYYY-MM-DD"T"HH24:MI:SS') || '+00:00',
-          TO_CHAR(SYS_EXTRACT_UTC(SYSTIMESTAMP), 'YYYY-MM-DD"T"HH24:MI:SS') || '+00:00';
+  record_migration('V001__baseline.sql', '5c48572fea008ddce6ca89879bc41b711665eb672a9e62c47926675fd34c9243');
+  record_migration('V002__open_api_collection.sql', '2da88c560320219738e2c167b89a98210c1481fb69bcdf049de0bcb53d619349');
   COMMIT;
   DBMS_OUTPUT.PUT_LINE('IN-BAPS Oracle installation verified. Re-running this file preserves application data.');
 END;

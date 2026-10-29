@@ -25,8 +25,17 @@ from backend.database import statements
 class BackendTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # Discovery order must never select the real Oracle backend merely
+        # because another test imported config before this module's env setup.
+        isolation = patch.multiple(config, STORAGE='sqlite', DATA_DIR=Path(_sandbox.name),
+                                   COOKIE_SECURE=False, ENVIRONMENT='development',
+                                   ENABLED_MODULES={'C-BAP', 'R-BAP', 'V-BAP'})
+        isolation.start()
+        cls.addClassCleanup(isolation.stop)
+        cls.addClassCleanup(_sandbox.cleanup)
         cls.context = TestClient(app)
         cls.client = cls.context.__enter__()
+        cls.addClassCleanup(cls.context.__exit__, None, None, None)
         create_user('test-admin', '검증 관리자', 'backend-test-password-2026!', role='admin')
         login = cls.client.post('/api/auth/login', json={'username': 'test-admin', 'password': 'backend-test-password-2026!'})
         assert login.status_code == 200, login.text
@@ -42,11 +51,6 @@ class BackendTests(unittest.TestCase):
         })
         assert fixture.status_code == 201, fixture.text
         cls.sample_id = fixture.json()['data']['id']
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.context.__exit__(None, None, None)
-        _sandbox.cleanup()
 
     def test_public_health_and_protected_api(self):
         anonymous = TestClient(app)
@@ -102,6 +106,7 @@ class BackendTests(unittest.TestCase):
         response = self.client.post('/api/datasets/import', headers=self.headers, files={'file': ('매출.csv', raw, 'text/csv')}, data={'module': 'V-BAP'})
         self.assertEqual(response.status_code, 201, response.text)
         self.assertEqual(response.json()['data']['row_count'], 2)
+        self.assertEqual(response.json()['data']['collection_type'], 'file')
         dataset_id = response.json()['data']['id']
         self.assertEqual(self.client.get('/api/datasets/' + dataset_id).json()['data']['rows'][0]['지역'], '서울')
         duplicate = self.client.post('/api/datasets/import', headers=self.headers, files={'file': ('bad.csv', b'a,a\n1,2', 'text/csv')}, data={'module': 'V-BAP'})
@@ -151,7 +156,7 @@ class BackendTests(unittest.TestCase):
 
     def test_migration_plan_is_complete(self):
         files = migration_files()
-        self.assertEqual(len(files), 1)
+        self.assertEqual([path.name for path, _ in files], ['V001__baseline.sql', 'V002__open_api_collection.sql'])
         statements = split_statements(files[0][0].read_text(encoding='utf-8'))
         self.assertEqual(len(statements), 11)
         self.assertTrue(any('CREATE TABLE INIT$_TB_BAPS_HISTORY' in text for text in statements))

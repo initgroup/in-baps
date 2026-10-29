@@ -1,0 +1,164 @@
+code	title	category
+NY.GDP.MKTP.CD	GDP 총액	경제·성장
+SP.POP.TOTL	총인구	인구·사회
+SP.DYN.LE00.IN	기대수명	보건·의료
+NY.GDP.MKTP.KD.ZG	실질 GDP 성장률	경제·성장
+NY.GDP.PCAP.CD	1인당 GDP	경제·성장
+NY.GDP.PCAP.KD.ZG	1인당 GDP 성장률	경제·성장
+NY.GNP.PCAP.CD	1인당 국민총소득	경제·성장
+NY.GNP.MKTP.CD	국민총소득 총액	경제·성장
+NE.CON.TOTL.ZS	최종소비 지출 비중	경제·성장
+NE.CON.PRVT.ZS	가계소비 지출 비중	경제·성장
+NE.CON.GOVT.ZS	정부소비 지출 비중	행정·재정
+NE.GDI.TOTL.ZS	총자본 형성 비중	경제·성장
+NE.GDI.FTOT.ZS	총고정자본 형성 비중	경제·성장
+NY.GNS.ICTR.ZS	국민총저축 비중	금융·물가
+FP.CPI.TOTL.ZG	소비자물가 상승률	금융·물가
+FP.CPI.TOTL	소비자물가지수	금융·물가
+PA.NUS.FCRF	공식 환율	금융·물가
+FR.INR.RINR	실질금리	금융·물가
+FR.INR.LEND	대출금리	금융·물가
+FR.INR.DPST	예금금리	금융·물가
+FM.LBL.BMNY.GD.ZS	광의통화 GDP 비중	금융·물가
+FS.AST.PRVT.GD.ZS	민간 신용공급 GDP 비중	금융·물가
+FD.AST.PRVT.GD.ZS	은행 민간신용 GDP 비중	금융·물가
+CM.MKT.LCAP.GD.ZS	상장기업 시가총액 GDP 비중	금융·물가
+CM.MKT.LDOM.NO	국내 상장기업 수	금융·물가
+CM.MKT.TRAD.GD.ZS	주식 거래대금 GDP 비중	금융·물가
+FB.ATM.TOTL.P5	성인 10만 명당 ATM 수	금융·물가
+FB.CBK.BRCH.P5	성인 10만 명당 은행 지점 수	금융·물가
+FI.RES.TOTL.CD	총 외환보유액	금융·물가
+GC.TAX.TOTL.GD.ZS	조세수입 GDP 비중	행정·재정
+GC.DOD.TOTL.GD.ZS	중앙정부 부채 GDP 비중	행정·재정
+GC.REV.XGRT.GD.ZS	보조금 제외 정부수입 비중	행정·재정
+GC.XPN.TOTL.GD.ZS	정부지출 GDP 비중	행정·재정
+NV.IND.MANF.ZS	제조업 부가가치 비중	제조·산업
+NV.IND.MANF.CD	제조업 부가가치 금액	제조·산업
+NV.IND.MANF.KD.ZG	제조업 부가가치 성장률	제조·산업
+NV.IND.TOTL.ZS	산업 부가가치 비중	제조·산업
+NV.IND.TOTL.KD.ZG	산업 부가가치 성장률	제조·산업
+SL.IND.EMPL.ZS	산업부문 고용 비중	제조·산업
+TX.VAL.MANF.ZS.UN	제조품 수출 비중	제조·산업
+TM.VAL.MANF.ZS.UN	제조품 수입 비중	제조·산업
+TX.VAL.TECH.MF.ZS	첨단기술 제품 수출 비중	제조·산업
+TX.VAL.TECH.CD	첨단기술 제품 수출액	제조·산업
+NV.MNF.FBTO.ZS.UN	제조업 내 식품·음료·담배 비중	제조·산업
+NV.MNF.TXTL.ZS.UN	제조업 내 섬유·의류 비중	제조·산업
+NV.MNF.CHEM.ZS.UN	제조업 내 화학제품 비중	제조·산업
+NV.MNF.MTRN.ZS.UN	제조업 내 기계·운송장비 비중	제조·산업
+NV.SRV.TOTL.ZS	서비스업 부가가치 비중	서비스·관광
+NV.SRV.TOTL.KD.ZG	서비스업 부가가치 성장률	서비스·관광
+SL.SRV.EMPL.ZS	서비스업 고용 비중	서비스·관광
+ST.INT.ARVL	국제 관광객 입국 수	서비스·관광
+ST.INT.RCPT.CD	국제 관광수입	서비스·관광
+ST.INT.XPND.CD	국제 관광지출	서비스·관광
+NE.EXP.GNFS.ZS	상품·서비스 수출 비중	무역·국제수지
+NE.IMP.GNFS.ZS	상품·서비스 수입 비중	무역·국제수지
+NE.TRD.GNFS.ZS	무역 GDP 비중	무역·국제수지
+BN.CAB.XOKA.GD.ZS	경상수지 GDP 비중	무역·국제수지
+BX.KLT.DINV.WD.GD.ZS	외국인 직접투자 순유입 비중	무역·국제수지
+BM.KLT.DINV.WD.GD.ZS	해외 직접투자 순유출 비중	무역·국제수지
+TX.VAL.MRCH.CD.WT	상품 수출액	무역·국제수지
+TM.VAL.MRCH.CD.WT	상품 수입액	무역·국제수지
+BX.TRF.PWKR.CD.DT	개인 송금 수취액	무역·국제수지
+SP.POP.GROW	인구 증가율	인구·사회
+SP.POP.DPND	전체 부양비	인구·사회
+SP.POP.DPND.OL	노년 부양비	인구·사회
+SP.POP.DPND.YG	유소년 부양비	인구·사회
+SP.POP.0014.TO.ZS	14세 이하 인구 비중	인구·사회
+SP.POP.1564.TO.ZS	15~64세 인구 비중	인구·사회
+SP.POP.65UP.TO.ZS	65세 이상 인구 비중	인구·사회
+SP.POP.TOTL.FE.ZS	여성 인구 비중	인구·사회
+SP.URB.TOTL.IN.ZS	도시 인구 비중	도시·주거
+SP.URB.GROW	도시 인구 증가율	도시·주거
+SP.RUR.TOTL.ZS	농촌 인구 비중	도시·주거
+EN.POP.DNST	인구 밀도	도시·주거
+SP.DYN.TFRT.IN	합계출산율	인구·사회
+SP.DYN.CBRT.IN	조출생률	인구·사회
+SP.DYN.CDRT.IN	조사망률	인구·사회
+SP.DYN.IMRT.IN	영아 사망률	보건·의료
+SH.DYN.MORT	5세 미만 아동 사망률	보건·의료
+SH.STA.MMRT	모성 사망비	보건·의료
+SH.XPD.CHEX.GD.ZS	경상의료비 GDP 비중	보건·의료
+SH.XPD.CHEX.PC.CD	1인당 경상의료비	보건·의료
+SH.MED.BEDS.ZS	천 명당 병상 수	보건·의료
+SH.MED.PHYS.ZS	천 명당 의사 수	보건·의료
+SH.IMM.IDPT	DPT 예방접종률	보건·의료
+SH.IMM.MEAS	홍역 예방접종률	보건·의료
+SH.TBS.INCD	결핵 발생률	보건·의료
+SH.STA.DIAB.ZS	성인 당뇨병 유병률	보건·의료
+SL.UEM.TOTL.ZS	전체 실업률	고용·노동
+SL.UEM.1524.ZS	청년 실업률	고용·노동
+SL.TLF.CACT.ZS	경제활동 참가율	고용·노동
+SL.TLF.CACT.FE.ZS	여성 경제활동 참가율	고용·노동
+SL.TLF.TOTL.IN	전체 노동력	고용·노동
+SL.EMP.TOTL.SP.ZS	고용 인구 비율	고용·노동
+SL.EMP.VULN.ZS	취약 고용 비율	고용·노동
+SL.GDP.PCAP.EM.KD	취업자당 GDP	고용·노동
+SE.XPD.TOTL.GD.ZS	교육지출 GDP 비중	교육·연구
+SE.PRM.ENRR	초등교육 총취학률	교육·연구
+SE.SEC.ENRR	중등교육 총취학률	교육·연구
+SE.TER.ENRR	고등교육 총취학률	교육·연구
+SE.PRM.ENRL.TC.ZS	초등학교 교사당 학생 수	교육·연구
+SE.SEC.ENRL.TC.ZS	중등학교 교사당 학생 수	교육·연구
+GB.XPD.RSDV.GD.ZS	연구개발 지출 GDP 비중	교육·연구
+SP.POP.SCIE.RD.P6	백만 명당 연구개발 연구원 수	교육·연구
+IP.PAT.RESD	거주자 특허 출원 수	디지털·기술
+IP.PAT.NRES	비거주자 특허 출원 수	디지털·기술
+IP.JRN.ARTC.SC	과학·기술 학술논문 수	교육·연구
+IT.NET.USER.ZS	인터넷 이용자 비중	디지털·기술
+IT.NET.BBND.P2	백 명당 초고속인터넷 가입 수	디지털·기술
+IT.CEL.SETS.P2	백 명당 이동통신 가입 수	디지털·기술
+IT.MLT.MAIN.P2	백 명당 유선전화 가입 수	디지털·기술
+IT.NET.SECR.P6	백만 명당 보안 인터넷 서버 수	디지털·기술
+TX.VAL.ICTG.ZS.UN	ICT 제품 수출 비중	디지털·기술
+TM.VAL.ICTG.ZS.UN	ICT 제품 수입 비중	디지털·기술
+AG.LND.FRST.ZS	산림 면적 비중	환경·기후
+AG.LND.FRST.K2	산림 면적	환경·기후
+AG.LND.TOTL.K2	전체 육지 면적	환경·기후
+EN.ATM.PM25.MC.M3	초미세먼지 평균 노출 농도	환경·기후
+EN.ATM.PM25.MC.ZS	대기질 권고 초과 노출 인구 비중	환경·기후
+ER.H2O.FWTL.ZS	내부 수자원 대비 담수 취수 비중	환경·기후
+ER.H2O.INTR.PC	1인당 내부 재생 담수자원	환경·기후
+ER.H2O.FWAG.ZS	농업용 담수 취수 비중	환경·기후
+ER.H2O.FWIN.ZS	산업용 담수 취수 비중	환경·기후
+ER.LND.PTLD.ZS	육상 보호구역 비중	환경·기후
+ER.MRN.PTMR.ZS	해양 보호구역 비중	환경·기후
+EG.USE.PCAP.KG.OE	1인당 에너지 사용량	에너지·전력
+EG.USE.ELEC.KH.PC	1인당 전력 소비량	에너지·전력
+EG.FEC.RNEW.ZS	최종 에너지 중 재생에너지 비중	에너지·전력
+EG.ELC.RNEW.ZS	재생에너지 전력생산 비중	에너지·전력
+EG.ELC.NUCL.ZS	원자력 발전 비중	에너지·전력
+EG.ELC.COAL.ZS	석탄 발전 비중	에너지·전력
+EG.ELC.NGAS.ZS	천연가스 발전 비중	에너지·전력
+EG.ELC.HYRO.ZS	수력 발전 비중	에너지·전력
+EG.IMP.CONS.ZS	에너지 순수입 의존도	에너지·전력
+EG.ELC.LOSS.ZS	송배전 전력 손실 비중	에너지·전력
+EG.ELC.ACCS.ZS	전력 접근 인구 비중	에너지·전력
+EG.CFT.ACCS.ZS	청정 조리연료 접근 비중	에너지·전력
+NV.AGR.TOTL.ZS	농림어업 부가가치 비중	농업·식량
+NV.AGR.TOTL.KD.ZG	농림어업 부가가치 성장률	농업·식량
+SL.AGR.EMPL.ZS	농업부문 고용 비중	농업·식량
+AG.LND.AGRI.ZS	농업용 토지 비중	농업·식량
+AG.LND.ARBL.ZS	경작 가능 토지 비중	농업·식량
+AG.YLD.CREL.KG	곡물 단위면적당 수확량	농업·식량
+AG.PRD.CREL.MT	곡물 생산량	농업·식량
+AG.PRD.FOOD.XD	식량 생산지수	농업·식량
+AG.PRD.CROP.XD	작물 생산지수	농업·식량
+AG.CON.FERT.ZS	경작지 면적당 비료 소비량	농업·식량
+ER.FSH.PROD.MT	어업·양식 생산량	농업·식량
+IS.AIR.PSGR	항공 여객 수	교통·물류
+IS.AIR.GOOD.MT.K1	항공 화물 운송량	교통·물류
+IS.SHP.GOOD.TU	컨테이너 항만 물동량	교통·물류
+IS.RRS.TOTL.KM	철도 노선 길이	교통·물류
+IS.RRS.PASG.KM	철도 여객 운송량	교통·물류
+SH.STA.TRAF.P5	교통사고 사망률	교통·물류
+SI.POV.GINI	소득 불평등 지니계수	복지·평등
+SI.DST.FRST.20	하위 20% 소득 점유율	복지·평등
+SI.DST.05TH.20	상위 20% 소득 점유율	복지·평등
+SG.GEN.PARL.ZS	국회 여성 의석 비중	복지·평등
+SG.DMK.SRCR.FN.ZS	여성의 금융계좌 보유율	복지·평등
+SH.H2O.BASW.ZS	기본 식수 서비스 접근 비중	도시·주거
+SH.STA.BASS.ZS	기본 위생 서비스 접근 비중	도시·주거
+MS.MIL.XPND.GD.ZS	국방비 GDP 비중	행정·재정
+VC.IHR.PSRC.P5	인구 10만 명당 고의살인 피해율	안전·재난

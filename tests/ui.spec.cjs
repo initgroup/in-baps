@@ -15,6 +15,52 @@ const fixtureRows=[
 const issues=new WeakMap(),accounts=new WeakMap();
 const qa=path.join(__dirname,'..','.runtime','qa');
 
+test('advanced statistical parameters, diagnostics, saved results and JSON export',async({page})=>{
+ const rows=Array.from({length:32},(_,i)=>({x:i%4,z:Math.floor(i/4)%4,y:5+2*(i%4)+3*(Math.floor(i/4)%4)+(i<16?-1:1),group:i<16?'A':'B'}));
+ rows.push({x:null,z:1,y:4,group:'A'});
+ await explicitDataset(page,'R-BAP','고급 통계 UI 명시적 입력',rows);
+ await route(page,'M02001','R-BAP 데이터 분석');
+ await expect(page.locator('#analysis-methods [data-choice-status]')).toContainText('20개');await expect(page.locator('select#analysis-method')).toHaveCount(0);
+ const execute=async()=>{
+  const response=page.waitForResponse(r=>r.url().endsWith('/api/analysis')&&r.request().method()==='POST');
+  await page.locator('#run-analysis').click();const completed=await response;
+  expect(completed.status()).toBe(201);return (await completed.json()).data;
+ };
+ await chooseMethod(page,'descriptive');
+ await page.locator('#analysis-confidence').selectOption('0.99');
+ const descriptive=await execute();
+ expect(descriptive.parameters.confidence).toBe(.99);
+ expect(descriptive.result.rows.find(row=>row.name==='x').n).toBe(32);
+ await expect(page.locator('#analysis-result')).toContainText('평균의 99% 신뢰구간');
+ await expect(page.locator('.advanced-result-table')).toHaveCount(1);
+ await expect(page.locator('.advanced-sample-note')).toContainText('입력 33행');
+ await chooseMethod(page,'pca');
+ const pca=await execute();expect(pca.result.sample.excluded).toBe(1);
+ await expect(page.locator('#advanced-chart canvas').first()).toBeVisible();
+ await expect(page.locator('#analysis-result')).toContainText('설명분산');
+ await chooseMethod(page,'ols');
+ await page.locator('#analysis-value').selectOption('y');
+ await page.locator('[name="advanced-columns"][value="x"]').check();
+ await page.locator('[name="advanced-columns"][value="z"]').check();
+ await expect(page.locator('[name="advanced-columns"][value="y"]')).toBeDisabled();
+ const regression=await execute();
+ expect(regression.parameters.robust).toBe(true);
+ expect(regression.parameters.columns).toEqual(['x','z']);
+ expect(regression.result.tables.some(table=>table.key==='validation')).toBe(true);
+ await expect(page.locator('#analysis-result')).toContainText('HC3');
+ await expect(page.locator('#analysis-result')).toContainText('VIF');
+ await page.locator('#analysis-history').click();
+ await page.locator('[data-analysis-history]').filter({hasText:'기술통계·평균 신뢰구간'}).click();
+ await expect(page.locator('#result-title')).toHaveText('기술통계·평균 신뢰구간');
+ await expect(page.locator('[data-analysis-method=ols]')).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('#analysis-result')).toContainText('평균의 99% 신뢰구간');
+ const downloading=page.waitForEvent('download');await page.locator('#export-analysis-json').click();
+ const download=await downloading;
+ expect(download.suggestedFilename()).toBe('inbaps-analysis-descriptive.json');
+ const saved=JSON.parse(fs.readFileSync(await download.path(),'utf8'));
+ expect(saved.id).toBe(descriptive.id);expect(saved.result).toEqual(descriptive.result);
+});
+
 test.beforeEach(async({page})=>{
  const captured={errors:[],console:[]};issues.set(page,captured);
  page.on('pageerror',e=>captured.errors.push(e.message));
@@ -64,18 +110,22 @@ async function explicitDataset(page,module='R-BAP',name=fixtureName,rows=fixture
   core.state.selected=item.id;await core.refreshData();window.dispatchEvent(new HashChangeEvent('hashchange'));return item;
  },{name,rows,module});
 }
+async function chooseMethod(page,id){await page.locator('#analysis-methods [data-choice-search]').fill(id);await page.locator(`[data-analysis-method="${id}"]`).click();}
 async function selectDataset(page,name){
- const select=page.locator('#dataset-select');await select.selectOption({label:name});
- await expect(select.locator('option:checked')).toHaveText(name);
+ if(await page.locator('#analysis-data-picker').count())await page.locator('#analysis-data-picker').evaluate(el=>el.open=true);
+ if(await page.locator('select#dataset-select').isVisible()){await page.locator('#dataset-select').selectOption({label:name});}
+ else{const host=page.locator('#analysis-datasets:visible,#visual-datasets:visible');await host.locator('[data-choice-search]').fill(name);const id=await page.evaluate(async name=>(await import('/static/js/core.js')).state.datasets.find(item=>item.name===name)?.id,name);await host.locator(`[data-dataset-choice="${id}"]`).click();}
  await expect.poll(()=>page.evaluate(async()=>{const {state}=await import('/static/js/core.js');return state.dataset?.name;})).toBe(name);
 }
+async function visualDataset(page){if(await page.locator('#visual-datasets').isVisible()){const id=await page.evaluate(async()=>(await import('/static/js/core.js')).state.selected);await page.locator(`[data-dataset-choice="${id}"]`).click();}}
 async function runAnalysis(page,method){
- await page.locator('#analysis-method').selectOption(method);
+ await chooseMethod(page,method);
  const response=page.waitForResponse(r=>r.url().endsWith('/api/analysis')&&r.request().method()==='POST');
  await page.locator('#run-analysis').click();const result=await response;expect(result.status()).toBe(201);
  await expect(page.locator('#export-analysis')).toBeEnabled();return (await result.json()).data;
 }
 async function chartType(page,type){
+ await visualDataset(page);
  await page.locator(`[data-chart-type="${type}"]`).click();
  await expect(page.locator(`[data-chart-type="${type}"]`)).toHaveAttribute('aria-pressed','true');
  await page.locator('#visual-x').selectOption('region');await page.locator('#visual-y').selectOption('revenue');
@@ -84,6 +134,137 @@ async function chartType(page,type){
  await expect(page.locator('#studio-chart canvas').first()).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>window.echarts.getInstanceByDom(document.querySelector('#studio-chart'))?.getOption().series?.[0]?.type)).toBe(type==='area'?'line':type);
 }
+
+test('[Workspace lists] accumulated datasets remain bounded and V-BAP requires data before chart options',async({page})=>{
+ const records=await page.evaluate(async()=>{
+  const core=await import('/static/js/core.js'),items=[];
+  for(let index=0;index<45;index++)items.push(await core.post('/datasets',{name:'누적 목록 '+String(index).padStart(2,'0'),module:'R-BAP',source:index%2?'analysis':'explicit-ui-input',rows:[{region:'서울',value:index+1},{region:'부산',value:index+2}]}));
+  await core.refreshData();return items;
+ });
+ await route(page,'M02001','R-BAP 데이터 분석');
+ await expect(page.locator('#analysis-datasets [data-dataset-choice]')).toHaveCount(6);
+ await page.locator('#analysis-data-picker summary').click();
+ await page.locator('#analysis-datasets [data-choice-search]').fill('누적 목록 42');
+ await expect(page.locator('#analysis-datasets [data-dataset-choice]')).toHaveCount(1);
+ await page.locator('#analysis-datasets [data-dataset-choice]').click();
+ await expect(page.locator('#analysis-selected-data')).toHaveText('누적 목록 42');
+ await expect(page.locator('#analysis-data-picker')).not.toHaveAttribute('open','');
+ const methodBox=await page.locator('.research-methods').boundingBox(),settingsBox=await page.locator('.research-settings').boundingBox();
+ expect(Math.abs(methodBox.y-settingsBox.y)).toBeLessThan(2);
+ expect(settingsBox.x).toBeGreaterThan(methodBox.x);
+ await expect(page.locator('#run-analysis')).toBeInViewport();
+ const resultBox=await page.locator('.research-results').boundingBox();
+ expect(Math.abs(resultBox.x-settingsBox.x)).toBeLessThan(2);
+ expect(resultBox.y-settingsBox.y-settingsBox.height).toBeLessThan(25);
+ expect(resultBox.y).toBeLessThan(methodBox.y+methodBox.height);
+ await page.locator('#analysis-data-picker summary').click();
+ await expect(page.locator('#analysis-datasets [data-choice-search]')).toHaveValue('누적 목록 42');
+ await page.locator('#analysis-data-picker summary').click();
+ await expect(page.locator('#analysis-page select#dataset-select,#analysis-page select#analysis-method,#run-batch-analysis')).toHaveCount(0);
+ await chooseMethod(page,'ols');await expect(page.locator('#analysis-settings-title')).toContainText('다중 선형회귀');
+ await expect(page.locator('#analysis-run-method')).toContainText('다중 선형회귀');
+ await page.screenshot({path:path.join(qa,'workspace-research-desktop.png'),fullPage:true});
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
+ await page.screenshot({path:path.join(qa,'workspace-research-mobile.png'),fullPage:true,animations:'disabled'});await page.setViewportSize({width:1440,height:1000});
+ await route(page,'M03001','V-BAP 시각화');await expect(page.locator('#visual-datasets')).toBeVisible();
+ await expect(page.locator('#visual-data-picker summary')).toContainText('1. 시각화 데이터셋');
+ await expect(page.locator('#visual-data-picker summary')).toContainText('데이터셋을 선택하세요.');
+ await expect(page.locator('#visual-data-picker summary')).toContainText('목록 열기 / 닫기');
+ await expect(page.getByRole('searchbox',{name:'시각화 데이터셋 검색',exact:true})).toBeVisible();
+ await expect(page.locator('#visual-datasets .choice-filters button')).toHaveText(['전체','API','파일','직접 입력','DB SQL','분석 결과']);
+ await page.screenshot({path:path.join(qa,'workspace-data-first-desktop.png'),fullPage:true});
+ await expect(page.locator('[data-chart-type],#visual-fields')).toHaveCount(0);
+ await page.locator('#visual-datasets [data-choice-search]').fill('누적');
+ await page.locator('#visual-datasets [data-choice-search]').fill('');
+ await expect(page.locator('#visual-datasets [data-dataset-choice]')).toHaveCount(12);
+ await page.locator('#visual-datasets [data-choice-next]').click();await expect(page.locator('#visual-datasets [data-choice-page]')).toHaveText('2 / 4');
+ await page.locator('#visual-datasets [data-choice-search]').fill('누적 목록 42');await page.locator('#visual-datasets [data-dataset-choice]').click();
+ await expect(page.locator('#visual-selected-name')).toHaveText('누적 목록 42');await expect(page.locator('[data-chart-type]')).toHaveCount(14);await expect(page.locator('#visual-fields')).toHaveCount(0);
+ await page.locator('[data-chart-type=bar]').scrollIntoViewIfNeeded();
+ const firstTypePosition=await page.locator('[data-chart-type=bar]').boundingBox();
+ await page.evaluate(()=>{window.__firstTypeButton=document.querySelector('[data-chart-type=bar]');window.__firstDataSummary=document.querySelector('#visual-data-picker summary');window.__firstScrollY=scrollY;});
+ await page.locator('[data-chart-type=bar]').click();await expect(page.locator('#visual-fields')).toBeVisible();await expect(page.locator('#visual-grid-body tr')).toHaveCount(2);
+ expect(await page.evaluate(()=>window.__firstTypeButton===document.querySelector('[data-chart-type=bar]')&&window.__firstDataSummary===document.querySelector('#visual-data-picker summary'))).toBe(true);
+ await expect(page.locator('[data-chart-type=bar]')).toBeFocused();
+ const afterFirstTypePosition=await page.locator('[data-chart-type=bar]').boundingBox();
+ expect(Math.abs(afterFirstTypePosition.x-firstTypePosition.x)).toBeLessThan(1);
+ expect(Math.abs(afterFirstTypePosition.y-firstTypePosition.y)).toBeLessThan(1);
+ expect(await page.evaluate(()=>Math.abs(scrollY-window.__firstScrollY))).toBeLessThan(1);
+ await page.evaluate(()=>{window.__stableChartHost=document.querySelector('#studio-chart');window.__stableTypeButton=document.querySelector('[data-chart-type=bar]');});
+ await page.locator('[data-chart-type=pie]').click();
+ await expect.poll(()=>page.evaluate(()=>window.echarts.getInstanceByDom(document.querySelector('#studio-chart'))?.getOption().series[0].type)).toBe('pie');
+ expect(await page.evaluate(()=>window.__stableChartHost===document.querySelector('#studio-chart')&&window.__stableTypeButton===document.querySelector('[data-chart-type=bar]'))).toBe(true);
+ await page.evaluate(()=>{window.__stableChart=window.echarts.getInstanceByDom(document.querySelector('#studio-chart'));});
+ await page.locator('[data-chart-type=pie]').click();
+ expect(await page.evaluate(()=>window.__stableChart===window.echarts.getInstanceByDom(document.querySelector('#studio-chart')))).toBe(true);
+ expect(await page.evaluate(()=>window.__stableChart.getOption().animation)).toBe(false);
+ await page.locator('[data-chart-type=bar]').click();
+ await page.screenshot({path:path.join(qa,'workspace-visual-options-desktop.png'),fullPage:true});
+ await page.evaluate(()=>{window.__disclosureChart=window.echarts.getInstanceByDom(document.querySelector('#studio-chart'));});
+ await page.locator('#visual-data-picker summary').click();await expect(page.locator('#visual-datasets [data-choice-search]')).toHaveValue('누적 목록 42');
+ await expect(page.locator('#visual-fields')).toBeVisible();
+ expect(await page.evaluate(()=>window.__disclosureChart===window.echarts.getInstanceByDom(document.querySelector('#studio-chart')))).toBe(true);
+ await page.locator('#visual-data-picker summary').click();await expect(page.locator('#visual-datasets')).toBeHidden();
+ await page.locator('#visual-data-picker summary').focus();await page.keyboard.press('Enter');await expect(page.locator('#visual-datasets')).toBeVisible();
+ await page.locator('#visual-datasets [data-dataset-choice]').click();await expect(page.locator('#visual-datasets')).toBeHidden();
+ expect(await page.evaluate(()=>window.__disclosureChart===window.echarts.getInstanceByDom(document.querySelector('#studio-chart')))).toBe(true);
+ await page.locator('#visual-data-picker summary').click();await page.locator('#visual-datasets [data-choice-search]').fill('누적 목록 41');
+ await page.locator('#visual-datasets [data-dataset-choice]').click();await expect(page.locator('#visual-selected-name')).toHaveText('누적 목록 41');
+ await expect(page.locator('#visual-datasets')).toBeHidden();await expect(page.locator('#visual-fields')).toHaveCount(0);
+ await page.locator('#visual-data-picker summary').click();
+ await page.locator('#visual-datasets [data-choice-search]').fill('');await expect(page.locator('#visual-datasets [data-dataset-choice]')).toHaveCount(12);
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(qa,'workspace-data-first-mobile.png'),fullPage:true});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
+ await page.setViewportSize({width:1440,height:1000});await route(page,'M04001','데이터 카탈로그');
+ await expect(page.locator('[data-catalog-table] tbody tr')).toHaveCount(20);await page.locator('[data-catalog-next]').click();await expect(page.locator('[data-catalog-page]')).toHaveText('2 / 3');
+ await page.locator('[data-catalog-search]').fill('누적 목록 42');await expect(page.locator('[data-catalog-table] tbody tr')).toHaveCount(1);
+ await expect(page.locator('[data-catalog-table]')).toContainText('직접 입력');
+ expect(records).toHaveLength(45);
+});
+test('[Workspace lists] wheel scrolling continues into the page at list boundaries and over short lists',async({page})=>{
+ await page.evaluate(async()=>{
+  const core=await import('/static/js/core.js');
+  for(let index=0;index<24;index++)await core.post('/datasets',{name:'스크롤 검증 '+String(index).padStart(2,'0'),module:'R-BAP',source:'explicit-ui-scroll-fixture',rows:[{region:'서울',value:index}],description:'목록 스크롤과 부모 페이지의 연결을 검증하는 명시적 입력 데이터'});
+  await core.refreshData();
+ });
+ await page.setViewportSize({width:1440,height:420});
+ async function hoverVisible(locator){
+  const box=await locator.boundingBox();
+  const top=Math.max(68,box.y),bottom=Math.min(410,box.y+box.height);
+  expect(bottom-top).toBeGreaterThan(5);
+  await page.mouse.move(box.x+Math.min(box.width/2,120),(top+bottom)/2);
+ }
+ async function checkChaining(locator,overflow){
+  await locator.scrollIntoViewIfNeeded();
+  expect(await locator.evaluate(el=>el.scrollHeight>el.clientHeight+2)).toBe(overflow);
+  expect(await locator.evaluate(el=>getComputedStyle(el).overscrollBehaviorY)).toBe('auto');
+  if(overflow){
+   await locator.evaluate(el=>{el.scrollTop=0;});await hoverVisible(locator);
+   const before=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,120);
+   await expect.poll(()=>locator.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
+   expect(await page.evaluate(()=>scrollY)).toBe(before);
+  }
+  await locator.evaluate(el=>{el.scrollTop=el.scrollHeight;});
+  await page.evaluate(()=>scrollBy(0,-80));await hoverVisible(locator);
+  const beforeDown=await page.evaluate(()=>scrollY);
+  expect(await page.evaluate(()=>document.scrollingElement.scrollHeight-innerHeight-scrollY)).toBeGreaterThan(10);
+  await page.mouse.wheel(0,180);
+  await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(beforeDown);
+  await locator.scrollIntoViewIfNeeded();await locator.evaluate(el=>{el.scrollTop=0;});
+  await page.evaluate(()=>{if(scrollY<80)scrollTo(0,80);});await hoverVisible(locator);
+  const beforeUp=await page.evaluate(()=>scrollY);expect(beforeUp).toBeGreaterThan(0);
+  await page.mouse.wheel(0,-180);
+  await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(beforeUp);
+ }
+ await route(page,'M04001','데이터 카탈로그');
+ await checkChaining(page.locator('.dataset-catalog-scroll'),true);
+ await page.locator('[data-catalog-search]').fill('스크롤 검증 23');
+ await expect(page.locator('[data-catalog-table] tbody tr')).toHaveCount(1);
+ await checkChaining(page.locator('.dataset-catalog-scroll'),false);
+ await route(page,'M02001','R-BAP 데이터 분석');
+ await checkChaining(page.locator('#analysis-methods .choice-scroll'),true);
+});
+
 async function persistContractDataset(page,payload,rows=fixtureRows){
  // Only the TARGET endpoint is mocked. Its returned dataset is an explicit,
  // ordinary R/V fixture persisted through the real authenticated SYSTEM API.
@@ -239,33 +420,8 @@ test('R-BAP profile, aggregate, correlation and text persist real API results',a
  const correlation=await runAnalysis(page,'correlation');expect(correlation.result.matrix.some(v=>v.x==='revenue'&&v.y==='visitors'&&v.value===1)).toBeTruthy();
  const text=await runAnalysis(page,'text');expect(text.result.token_count).toBeGreaterThan(0);await expect(page.locator('#analysis-result')).toContainText('단어 빈도 분석');
  const download=page.waitForEvent('download');await page.locator('#export-analysis').click();expect((await download).suggestedFilename()).toBe('inbaps-analysis.csv');
- await verifyBatchAnalysis(page);
+ await expect(page.locator('#run-batch-analysis')).toHaveCount(0);
 });
-
-async function verifyBatchAnalysis(page){
- const results=[];const listener=async response=>{if(response.url().endsWith('/api/analysis')&&response.status()===201)results.push((await response.json()).data);};page.on('response',listener);
- await page.locator('#run-batch-analysis').click();await expect(page.locator('#analysis-batch-form')).toBeVisible();
- await page.locator('#analysis-batch-form [name=group]').selectOption('region');await page.locator('#analysis-batch-form [name=value]').selectOption('revenue');await page.locator('#analysis-batch-form [name=text]').selectOption('keyword');
- await page.locator('#analysis-batch-form button[type=submit]').click();await expect(page.locator('.batch-result.success')).toHaveCount(4);await expect(page.locator('#run-batch-analysis')).toBeEnabled();
- await expect.poll(()=>results.length).toBe(4);expect(results.map(r=>r.method)).toEqual(['profile','aggregate','correlation','text']);expect(results[1].result.rows.map(r=>r.value)).toEqual([70,30]);
- for(const [method,title] of [['profile','데이터 프로파일'],['aggregate','그룹별 집계'],['correlation','상관관계 분석'],['text','텍스트 빈도 분석']]){await page.locator('.batch-result.success').filter({hasText:title}).click();await expect(page.locator('#result-title')).toHaveText(title);await expect(page.locator('.batch-result.active')).toHaveCount(1);await expect(page.locator('.batch-result.active')).toContainText(title);await expect(page.locator('.batch-result.active')).toContainText('현재 보기');await expect(page.locator('.batch-result.active')).toHaveAttribute('aria-pressed','true');}
- const saved=await page.evaluate(async()=>{const core=await import('/static/js/core.js');return core.api('/analyses');});for(const r of results)expect(saved.some(s=>s.id===r.id)).toBeTruthy();
- await page.locator('.batch-result.success').filter({hasText:'그룹별 집계'}).click();const csv=page.waitForEvent('download');await page.locator('#export-analysis').click();expect((await csv).suggestedFilename()).toBe('inbaps-analysis.csv');
- const transfer=page.waitForResponse(r=>r.url().endsWith('/api/datasets')&&r.request().method()==='POST');await page.locator('#to-visualization').click();expect((await (await transfer).json()).data.description).toContain(results.find(r=>r.method==='aggregate').id);await expect(page.locator('#studio-chart canvas').first()).toBeVisible();await route(page,'M02001','R-BAP 데이터 분석');
- // Insufficient numeric fields skip only correlation; count aggregation and text still persist.
- await explicitDataset(page,'R-BAP','Batch text-only',[{word:'alpha beta'},{word:'alpha gamma'}]);await expect(page.locator('#run-batch-analysis')).toBeVisible();await page.locator('#run-batch-analysis').click();await expect(page.locator('#analysis-batch-form [name=aggregation]')).toHaveValue('count');await page.locator('#analysis-batch-form button[type=submit]').click();await expect(page.locator('.batch-result.success')).toHaveCount(3);await expect(page.locator('.batch-result.skipped')).toHaveCount(1);await expect(page.locator('.batch-result.skipped')).toContainText('2개 이상');
- // One failed method must not discard completed work or prevent the later text result.
- await selectDataset(page,fixtureName);
- await page.route('**/api/analysis',async route=>{if(route.request().postDataJSON().method==='aggregate')return route.fulfill({status:422,json:{detail:'의도한 일괄 집계 검증 오류'}});return route.continue();});
- await page.locator('#run-batch-analysis').click();await page.locator('#analysis-batch-form button[type=submit]').click();await expect(page.locator('.batch-result.failed')).toHaveCount(1);await expect(page.locator('.batch-result.success')).toHaveCount(3);await expect(page.locator('.batch-result.failed')).toContainText('의도한 일괄 집계 검증 오류');await page.unroute('**/api/analysis');
- issues.get(page).console=issues.get(page).console.filter(message=>!(message.includes('422')&&message.includes('/api/analysis')));
- // Leaving the page stops scheduling further methods; an already accepted request can finish.
- await page.locator('#toast-region .message-head .message-close').all().then(async buttons=>{for(const b of buttons)await b.click();});
- let release,entered;const gate=new Promise(r=>release=r),started=new Promise(r=>entered=r);let calls=0;
- await page.route('**/api/analysis',async route=>{calls++;entered();await gate;await route.continue();});
- await page.locator('#run-batch-analysis').click();await page.locator('#analysis-batch-form button[type=submit]').click();await started;await expect(page.locator('#run-analysis')).toBeDisabled();await expect(page.locator('#run-batch-analysis')).toBeDisabled();await expect(page.locator('#progress-region [role=progressbar]')).toHaveAttribute('aria-valuenow','0');await route(page,'M04001','데이터 카탈로그');release();await expect.poll(()=>page.evaluate(async()=>!(await import('/static/js/analysis-batch.js')).batchRunning())).toBe(true);await page.unroute('**/api/analysis');expect(calls).toBe(1);
- await route(page,'M02001','R-BAP 데이터 분석');await expect(page.locator('.batch-result.stopped')).toHaveCount(3);await expect(page.locator('.batch-result.success')).toHaveCount(1);page.off('response',listener);
-}
 
 test('all four analysis outputs become V-BAP datasets with working field mappings',async({page})=>{
  await explicitDataset(page);
@@ -273,7 +429,7 @@ test('all four analysis outputs become V-BAP datasets with working field mapping
   await route(page,'M02001','R-BAP 데이터 분석');await selectDataset(page,fixtureName);const analysis=await runAnalysis(page,method);
   const transfer=page.waitForResponse(r=>r.url().endsWith('/api/datasets')&&r.request().method()==='POST');await page.locator('#to-visualization').click();
   const response=await transfer;expect(response.status()).toBe(201);const data=(await response.json()).data;expect(data.source).toBe('analysis');expect(data.module).toBe('V-BAP');expect(data.description).toContain(analysis.id);
-  await expect(page.getByRole('heading',{name:'V-BAP 시각화',exact:true})).toBeVisible();await expect(page.locator('#dataset-select')).toHaveValue(data.id);await expect(page.locator('#studio-chart canvas').first()).toBeVisible();
+  await expect(page.getByRole('heading',{name:'V-BAP 시각화',exact:true})).toBeVisible();await expect(page.locator('#visual-selected-name')).toHaveText(data.name);await expect(page.locator('#studio-chart canvas').first()).toBeVisible();
   await expect.poll(()=>page.evaluate(()=>window.echarts.getInstanceByDom(document.querySelector('#studio-chart'))?.getOption().series?.[0]?.type)).toBe(method==='correlation'?'heatmap':'bar');
  }
 });
@@ -300,7 +456,7 @@ test('[TARGET API contract] C-BAP JSON and file inputs send the selected target'
  await page.locator('#json-form button.primary').click();await expect(page.locator('#modal')).not.toBeVisible();await expect(page.locator('#collection-page')).toContainText('UI C JSON contract');
  expect(mock.calls.find(c=>c.p==='/api/dbms/import').body).toMatchObject({connection_id:'ui-target',module:'C-BAP',rows:fixtureRows});
  await page.locator('#collection-import').click();await page.locator('#import-form input[name=name]').fill('UI C CSV contract');await page.locator('#import-file').setInputFiles({name:'fixture.csv',mimeType:'text/csv',buffer:Buffer.from('region,revenue\n서울,11\n부산,22\n')});
- await page.locator('#import-form button[type=submit]').click();await expect(page.locator('#modal')).not.toBeVisible();await route(page,'M04001','데이터 카탈로그');await page.locator('#catalog-search').fill('UI C');await expect(page.locator('#catalog-table tbody tr')).toHaveCount(2);
+ await page.locator('#import-form button[type=submit]').click();await expect(page.locator('#modal')).not.toBeVisible();await route(page,'M04001','데이터 카탈로그');await page.locator('[data-catalog-search]').fill('UI C');await expect(page.locator('[data-catalog-table] tbody tr')).toHaveCount(2);
  await page.getByRole('button',{name:'UI C CSV contract',exact:true}).click();await expect(page.locator('#modal')).toContainText('서울');await expect(page.locator('#modal')).toContainText('11');
  await verifyUploadProgress(page);
 });
@@ -317,7 +473,7 @@ test('[TARGET API contract] connection settings object SQL DML grid and controll
  await page.locator('#new-db-table').click();await page.locator('#object-ddl-form [name=table]').fill('SALES_UI_CHECK');await page.locator('#object-ddl-form [name=confirm]').check();await page.locator('#object-ddl-form .primary').click();await expect(page.locator('#modal')).not.toBeVisible();await expect(page.locator('#object-list')).toContainText('SALES_UI_CHECK');
  await page.locator('[data-db-tab=structure]').click();await page.locator('#add-db-column').click();await page.locator('[data-name]').fill('고객 메모');await page.locator('#object-ddl-form [name=confirm]').check();await page.locator('#object-ddl-form .primary').click();await expect(page.locator('#modal')).not.toBeVisible();
  for(const suffix of ['grid','dml'])for(const commit of [false,true])expect(mock.calls.some(c=>c.p==='/api/dbms/'+suffix&&c.body.commit===commit)).toBeTruthy();
- await page.locator('#query-to-visual').click();await page.locator('#query-dataset-form .primary').click();await expect(page.locator('#visualization-page')).toBeVisible();await expect(page.locator('#studio-chart canvas')).toBeVisible();
+ await page.locator('#query-to-visual').click();await page.locator('#query-dataset-form .primary').click();await expect(page.locator('#visualization-page')).toBeVisible();await visualDataset(page);await page.locator('[data-chart-type=bar]').click();await expect(page.locator('#studio-chart canvas')).toBeVisible();
  expect(mock.calls.find(c=>c.p==='/api/dbms/datasets').body).toMatchObject({connection_id:'ui-target',module:'V-BAP',limit:20000});
  await route(page,'M90002','DB 연결 설정');expect(mock.calls.filter(c=>c.p==='/api/dbms/sample')).toHaveLength(0);await page.locator('#create-sample').click();await page.locator('#sample-form .primary').click();await expect(page.locator('#catalog-page')).toBeVisible();expect(mock.calls.filter(c=>c.p==='/api/dbms/sample')).toHaveLength(1);
  await verifyObjectBrowser(page,mock);
@@ -478,7 +634,7 @@ test('login errors use persistent layers and invalid fields keep keyboard focus'
 
 test('[R-only] explicit independent data and analysis without C-BAP or V-BAP',async({page})=>{
  await expect(page.locator('#navigation [data-page=M01001]')).toHaveCount(0);await expect(page.locator('#navigation [data-page=M03001]')).toHaveCount(0);
- await explicitDataset(page,'R-BAP','UI R independent');await route(page,'M02001','R-BAP 데이터 분석');await expect(page.locator('#dataset-select option:checked')).toHaveText('UI R independent');
+ await explicitDataset(page,'R-BAP','UI R independent');await route(page,'M02001','R-BAP 데이터 분석');await expect(page.locator('[data-dataset-choice][aria-pressed=true]')).toContainText('UI R independent');
  expect((await runAnalysis(page,'profile')).result.row_count).toBe(4);expect((await runAnalysis(page,'aggregate')).result.rows.map(r=>r.value).sort((a,b)=>a-b)).toEqual([30,70]);
  await page.locator('#analysis-import').click();await expect(page.locator('#modal')).toContainText('TARGET DB를 먼저 연결하세요');
 });

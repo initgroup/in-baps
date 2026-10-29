@@ -1,4 +1,4 @@
-"""Generate a rerunnable, standalone Oracle 19c+ installer from immutable V001.
+"""Generate a rerunnable, standalone Oracle 19c+ installer from versioned DDL.
 
 No Oracle connection. Run after changing the installer template/contract.
 """
@@ -19,7 +19,8 @@ def render():
     baseline = DDL / 'V001__baseline.sql'
     checksum = hashlib.sha256(baseline.read_bytes()).hexdigest()
     contract = json.loads((DDL / 'schema_contract.json').read_text(encoding='utf-8'))
-    sections = re.split(r'^/\s*$', baseline.read_text(encoding='utf-8'), flags=re.M)
+    versions = sorted(DDL.glob('V[0-9][0-9][0-9]__*.sql'))
+    sections = [section for version in versions for section in re.split(r'^/\s*$', version.read_text(encoding='utf-8'), flags=re.M)]
     creates = {}
     for section in sections:
         sql = re.sub(r'^--[^\n]*\n?', '', section.strip(), flags=re.M).strip()
@@ -29,8 +30,10 @@ def render():
     lines = []
     for table, spec in contract['tables'].items():
         lines.append(f'  ensure_table({literal(table)}, {literal(creates[table])});')
-        for name, kind, length in spec['columns']:
-            lines.append(f'  assert_column({literal(table)}, {literal(name)}, {literal(kind)}, {length});')
+        for column in spec['columns']:
+            name, kind, length, *nullable = column
+            optional = ', ' + literal(nullable[0]) if nullable else ''
+            lines.append(f'  assert_column({literal(table)}, {literal(name)}, {literal(kind)}, {length}{optional});')
         if table == 'INIT$_TB_BAPS_HISTORY':
             lines.append('  assert_history;')
         for name, kind, cols, expression in spec['constraints']:
@@ -45,7 +48,18 @@ def render():
     comment = "COMMENT ON TABLE INIT$_TB_BAPS_RECORD IS 'IN-BAPS owned dataset definitions, analysis results and visualizations'"
     lines.append('  EXECUTE IMMEDIATE ' + literal(comment) + ';')
     template = (DDL / 'installer.sql.template').read_text(encoding='utf-8')
-    return template.replace('__BASELINE_CHECKSUM__', checksum).replace('__GENERATED_OBJECTS__', '\n'.join(lines))
+    checks, records = [], []
+    for version in versions:
+        digest = hashlib.sha256(version.read_bytes()).hexdigest()
+        checks.append(f'    assert_migration({literal(version.name)}, {literal(digest)});')
+        records.append(f'  record_migration({literal(version.name)}, {literal(digest)});')
+    known = ','.join(literal(version.name) for version in versions)
+    # Quotes are doubled because this allow-list lives inside dynamic SQL.
+    return (template.replace('__BASELINE_CHECKSUM__', checksum)
+            .replace('__GENERATED_OBJECTS__', '\n'.join(lines))
+            .replace('__KNOWN_VERSIONS__', known.replace("'", "''"))
+            .replace('__CHECK_MIGRATIONS__', '\n'.join(checks))
+            .replace('__RECORD_MIGRATIONS__', '\n'.join(records)))
 
 
 def main():

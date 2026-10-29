@@ -16,6 +16,12 @@ services:
         value: oracle
       - key: BAPS_COOKIE_SECURE
         value: "true"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
       - key: BAPS_ALLOWED_HOSTS
         sync: false
       - key: BAPS_ADMIN_USER
@@ -42,3 +48,55 @@ services:
         value: /etc/secrets
       - key: DB_WALLET_PASSWORD
         sync: false
+  - type: cron
+    name: in-baps-collection
+    runtime: python
+    schedule: "*/5 * * * *"
+    buildCommand: bash scripts/render-build.sh
+    startCommand: python -m backend.collection_worker --once
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.9
+      - key: BAPS_ENV
+        value: production
+      - key: BAPS_STORAGE
+        value: oracle
+      - key: BAPS_COOKIE_SECURE
+        value: "true"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: BAPS_SECRET_KEY
+        fromService:
+          type: web
+          name: in-baps
+          envVarKey: BAPS_SECRET_KEY
+      - key: DB_MODE
+        value: cloud
+      - key: DB_USER_CLD
+        fromService:
+          type: web
+          name: in-baps
+          envVarKey: DB_USER_CLD
+      - key: DB_PASSWORD_CLD
+        fromService:
+          type: web
+          name: in-baps
+          envVarKey: DB_PASSWORD_CLD
+      - key: DB_DSN_CLD
+        fromService:
+          type: web
+          name: in-baps
+          envVarKey: DB_DSN_CLD
+      - key: DB_ORACLE_MODE
+        value: thin
+      - key: DB_WALLET_PATH
+        value: /etc/secrets
+      - key: DB_WALLET_PASSWORD
+        fromService:
+          type: web
+          name: in-baps
+          envVarKey: DB_WALLET_PASSWORD

@@ -88,6 +88,9 @@ def analyze(dataset, spec):
     rows, columns = dataset['rows'], dataset['columns']
     names = {col['name'] for col in columns}
     method = spec['method']
+    from backend.advanced_analytics import METHODS, analyze_advanced
+    if method in METHODS:
+        return analyze_advanced(dataset, spec)
     if method == 'profile':
         return profile(rows, columns)
     if method == 'aggregate':

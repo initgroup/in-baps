@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "IN-BAPS decision intelligence platform",
-  "scripts": {"vendor": "node scripts/vendor.mjs", "icons": "node scripts/build-icons.cjs", "check": "node scripts/check-frontend.mjs", "test:charts": "node --test tests/charts.test.mjs", "test:ui": "playwright test"},
+  "scripts": {"vendor": "node scripts/vendor.mjs", "icons": "node scripts/build-icons.cjs", "check": "node scripts/check-frontend.mjs", "test:charts": "node --test tests/charts.test.mjs tests/chart-grid.test.mjs", "test:ui": "playwright test"},
   "dependencies": {"echarts": "6.0.0", "lucide": "0.468.0", "@fontsource-variable/noto-sans-kr": "5.3.0"},
   "devDependencies": {"@playwright/test": "1.61.1"}
 }

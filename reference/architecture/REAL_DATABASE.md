@@ -8,7 +8,9 @@
 flowchart LR
     Member[회원 로그인] --> System[(SYSTEM Oracle)]
     Settings[회원별 TARGET 설정] --> System
-    Collection[C-BAP 파일 수집] --> Target[(TARGET Oracle)]
+    Collection[C-BAP 파일 및 Open API 수집] --> Target[(TARGET Oracle)]
+    Schedule[Render Cron 실행] --> Collection
+    Schedule --> System
     Existing[기존 고객 테이블] --> Target
     Workbench[DBMS SQL 작업실] --> Target
     Target --> Query[실제 SQL 조회 결과]
@@ -51,6 +53,9 @@ R-BAP 통계 분석은 실제 조회한 결과 범위에 대해 Python 서버에
 | `INIT$_TB_BAPS_CONNECTION` | 소유자별 연결·암호화한 TARGET 비밀번호·쓰기 허용·관리 테이블 목록 |
 | `INIT$_TB_BAPS_RECORD` | 데이터셋/분석/시각화/대시보드 payload |
 | `INIT$_TB_BAPS_HISTORY` | migration 체크섬·적용 시각·RUNNING/APPLIED |
+| `INIT$_TB_BAPS_API_SOURCE` | 회원별 API 설정·암호화 인증값·TARGET 매핑·실행 잠금 |
+| `INIT$_TB_BAPS_API_JOB` | 지속형 일정·다음 실행 시각·활성 상태 |
+| `INIT$_TB_BAPS_API_RUN` | 수동/배치 수집의 상태·저장 행 수·오류 이력 |
 | `INIT$_VW_BAPS_CATALOG` | 카탈로그 조회 뷰 |
 | `INIT$_SP_BAPS_SESSION_PURGE` | 명시적으로 호출하는 만료 세션 정리 |
 | `INIT$_IX_BAPS_*` 및 `INIT$_PK/UK/FK/CK_BAPS_*` | 인덱스·제약 |

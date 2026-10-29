@@ -248,6 +248,230 @@
           "CONFIG_JSON IS JSON"
         ]
       ]
+    },
+    "INIT$_TB_BAPS_API_SOURCE": {
+      "columns": [
+        [
+          "ID",
+          "VARCHAR2",
+          32
+        ],
+        [
+          "OWNER_ID",
+          "VARCHAR2",
+          32
+        ],
+        [
+          "NAME",
+          "VARCHAR2",
+          150
+        ],
+        [
+          "CONFIG_JSON",
+          "CLOB",
+          0
+        ],
+        [
+          "LOCK_TOKEN",
+          "VARCHAR2",
+          64,
+          "Y"
+        ],
+        [
+          "LOCK_UNTIL",
+          "NUMBER",
+          0
+        ],
+        [
+          "CREATED_AT",
+          "VARCHAR2",
+          40
+        ],
+        [
+          "UPDATED_AT",
+          "VARCHAR2",
+          40
+        ]
+      ],
+      "constraints": [
+        [
+          "INIT$_PK_BAPS_API_SOURCE",
+          "P",
+          "ID",
+          ""
+        ],
+        [
+          "INIT$_FK_BAPS_API_SRC_OWNER",
+          "R",
+          "OWNER_ID",
+          "INIT$_TB_BAPS_MEMBER:ID"
+        ],
+        [
+          "INIT$_CK_BAPS_API_SRC_JSON",
+          "C",
+          "",
+          "CONFIG_JSON IS JSON"
+        ]
+      ]
+    },
+    "INIT$_TB_BAPS_API_JOB": {
+      "columns": [
+        [
+          "ID",
+          "VARCHAR2",
+          32
+        ],
+        [
+          "OWNER_ID",
+          "VARCHAR2",
+          32
+        ],
+        [
+          "SOURCE_ID",
+          "VARCHAR2",
+          32
+        ],
+        [
+          "NAME",
+          "VARCHAR2",
+          150
+        ],
+        [
+          "INTERVAL_SECONDS",
+          "NUMBER",
+          0
+        ],
+        [
+          "NEXT_RUN_AT",
+          "NUMBER",
+          0
+        ],
+        [
+          "ENABLED",
+          "NUMBER",
+          0
+        ],
+        [
+          "CREATED_AT",
+          "VARCHAR2",
+          40
+        ],
+        [
+          "UPDATED_AT",
+          "VARCHAR2",
+          40
+        ]
+      ],
+      "constraints": [
+        [
+          "INIT$_PK_BAPS_API_JOB",
+          "P",
+          "ID",
+          ""
+        ],
+        [
+          "INIT$_FK_BAPS_API_JOB_OWNER",
+          "R",
+          "OWNER_ID",
+          "INIT$_TB_BAPS_MEMBER:ID"
+        ],
+        [
+          "INIT$_FK_BAPS_API_JOB_SRC",
+          "R",
+          "SOURCE_ID",
+          "INIT$_TB_BAPS_API_SOURCE:ID"
+        ],
+        [
+          "INIT$_UK_BAPS_API_JOB_SRC",
+          "U",
+          "OWNER_ID,SOURCE_ID",
+          ""
+        ],
+        [
+          "INIT$_CK_BAPS_API_JOB_ON",
+          "C",
+          "",
+          "ENABLED IN (0,1)"
+        ],
+        [
+          "INIT$_CK_BAPS_API_JOB_INT",
+          "C",
+          "",
+          "INTERVAL_SECONDS >= 300 AND INTERVAL_SECONDS <= 604800"
+        ]
+      ]
+    },
+    "INIT$_TB_BAPS_API_RUN": {
+      "columns": [
+        [
+          "ID",
+          "VARCHAR2",
+          32
+        ],
+        [
+          "OWNER_ID",
+          "VARCHAR2",
+          32
+        ],
+        [
+          "SOURCE_ID",
+          "VARCHAR2",
+          32
+        ],
+        [
+          "JOB_ID",
+          "VARCHAR2",
+          32,
+          "Y"
+        ],
+        [
+          "STARTED_AT",
+          "NUMBER",
+          0
+        ],
+        [
+          "FINISHED_AT",
+          "NUMBER",
+          0,
+          "Y"
+        ],
+        [
+          "STATUS",
+          "VARCHAR2",
+          30
+        ],
+        [
+          "RESULT_JSON",
+          "CLOB",
+          0
+        ]
+      ],
+      "constraints": [
+        [
+          "INIT$_PK_BAPS_API_RUN",
+          "P",
+          "ID",
+          ""
+        ],
+        [
+          "INIT$_FK_BAPS_API_RUN_OWNER",
+          "R",
+          "OWNER_ID",
+          "INIT$_TB_BAPS_MEMBER:ID"
+        ],
+        [
+          "INIT$_FK_BAPS_API_RUN_SRC",
+          "R",
+          "SOURCE_ID",
+          "INIT$_TB_BAPS_API_SOURCE:ID"
+        ],
+        [
+          "INIT$_CK_BAPS_API_RUN_JSON",
+          "C",
+          "",
+          "RESULT_JSON IS JSON"
+        ]
+      ]
     }
   },
   "indexes": {
@@ -262,6 +486,22 @@
     "INIT$_IX_BAPS_CONN_OWNER": [
       "INIT$_TB_BAPS_CONNECTION",
       "OWNER_ID"
+    ],
+    "INIT$_IX_BAPS_API_SRC_OWNER": [
+      "INIT$_TB_BAPS_API_SOURCE",
+      "OWNER_ID"
+    ],
+    "INIT$_IX_BAPS_API_JOB_DUE": [
+      "INIT$_TB_BAPS_API_JOB",
+      "ENABLED,NEXT_RUN_AT"
+    ],
+    "INIT$_IX_BAPS_API_RUN_OWNER": [
+      "INIT$_TB_BAPS_API_RUN",
+      "OWNER_ID,STARTED_AT"
+    ],
+    "INIT$_IX_BAPS_API_RUN_SRC": [
+      "INIT$_TB_BAPS_API_RUN",
+      "SOURCE_ID,STATUS"
     ]
   }
 }

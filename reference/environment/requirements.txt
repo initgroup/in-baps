@@ -7,3 +7,9 @@ python-multipart==0.0.32
 oracledb==3.4.2
 cryptography==50.0.2
 sqlglot==30.25.0
+numpy==2.3.3
+scipy==1.16.2
+statsmodels==0.14.5
+scikit-learn==1.7.2
+threadpoolctl==3.6.0
+defusedxml==0.7.1

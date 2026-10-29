@@ -38,12 +38,12 @@ DECLARE
     END IF;
   END;
 
-  PROCEDURE assert_column(p_table VARCHAR2, p_column VARCHAR2, p_type VARCHAR2, p_chars NUMBER) IS
+  PROCEDURE assert_column(p_table VARCHAR2, p_column VARCHAR2, p_type VARCHAR2, p_chars NUMBER, p_nullable VARCHAR2 DEFAULT 'N') IS
     n NUMBER;
   BEGIN
     SELECT COUNT(*) INTO n FROM user_tab_columns
      WHERE table_name = p_table AND column_name = p_column
-       AND data_type = p_type AND nullable = 'N'
+       AND data_type = p_type AND nullable = p_nullable
        AND (p_type <> 'VARCHAR2' OR (char_used = 'C' AND char_length >= p_chars))
        AND (p_type <> 'NUMBER' OR (data_precision IS NULL AND data_scale IS NULL));
     IF n <> 1 THEN
@@ -51,25 +51,42 @@ DECLARE
     END IF;
   END;
 
-  PROCEDURE assert_history IS
+  PROCEDURE assert_migration(p_version VARCHAR2, p_checksum VARCHAR2) IS
     n NUMBER;
     v_checksum VARCHAR2(64);
     v_status VARCHAR2(20);
   BEGIN
-    EXECUTE IMMEDIATE 'SELECT COUNT(*) FROM INIT$_TB_BAPS_HISTORY WHERE VERSION <> :version'
-      INTO n USING c_version;
-    IF n > 0 THEN
-      fail('Later/unknown migrations exist. Use backend.migrate apply; do not reinstall an older baseline.');
-    END IF;
     EXECUTE IMMEDIATE 'SELECT COUNT(*) FROM INIT$_TB_BAPS_HISTORY WHERE VERSION = :version'
-      INTO n USING c_version;
-    IF n > 1 THEN fail('Duplicate baseline history. Review schema history.'); END IF;
+      INTO n USING p_version;
+    IF n > 1 THEN fail('Duplicate migration history. Review schema history.'); END IF;
     IF n = 1 THEN
       EXECUTE IMMEDIATE 'SELECT CHECKSUM, STATUS FROM INIT$_TB_BAPS_HISTORY WHERE VERSION = :version'
-        INTO v_checksum, v_status USING c_version;
-      IF v_checksum <> c_checksum THEN fail('Baseline checksum mismatch. No history was replaced.'); END IF;
-      IF v_status NOT IN ('RUNNING','APPLIED') THEN fail('Unexpected baseline status.'); END IF;
+        INTO v_checksum, v_status USING p_version;
+      IF v_checksum <> p_checksum THEN fail('Migration checksum mismatch. No history was replaced.'); END IF;
+      IF v_status NOT IN ('RUNNING','APPLIED') THEN fail('Unexpected migration status.'); END IF;
     END IF;
+  END;
+
+  PROCEDURE assert_history IS
+    n NUMBER;
+  BEGIN
+    EXECUTE IMMEDIATE 'SELECT COUNT(*) FROM INIT$_TB_BAPS_HISTORY WHERE VERSION NOT IN (__KNOWN_VERSIONS__)'
+      INTO n;
+    IF n > 0 THEN fail('Unknown migrations exist. Use the matching newer checkout.'); END IF;
+__CHECK_MIGRATIONS__
+  END;
+
+  PROCEDURE record_migration(p_version VARCHAR2, p_checksum VARCHAR2) IS
+  BEGIN
+    EXECUTE IMMEDIATE
+      'MERGE INTO INIT$_TB_BAPS_HISTORY t USING (SELECT :version AS version, :checksum AS checksum FROM dual) s
+         ON (t.VERSION = s.version)
+       WHEN MATCHED THEN UPDATE SET t.STATUS = ''APPLIED'', t.APPLIED_AT = :updated_at WHERE t.STATUS = ''RUNNING''
+       WHEN NOT MATCHED THEN INSERT (VERSION, CHECKSUM, APPLIED_AT, STATUS)
+         VALUES (s.version, s.checksum, :created_at, ''APPLIED'')'
+      USING p_version, p_checksum,
+            TO_CHAR(SYS_EXTRACT_UTC(SYSTIMESTAMP), 'YYYY-MM-DD"T"HH24:MI:SS') || '+00:00',
+            TO_CHAR(SYS_EXTRACT_UTC(SYSTIMESTAMP), 'YYYY-MM-DD"T"HH24:MI:SS') || '+00:00';
   END;
 
   PROCEDURE ensure_constraint(p_table VARCHAR2, p_name VARCHAR2, p_type VARCHAR2, p_columns VARCHAR2, p_rule VARCHAR2) IS
@@ -169,17 +186,9 @@ BEGIN
     IF v_count = 0 THEN fail('No writable quota on the default tablespace. Ask the DBA to grant a bounded quota before installation.'); END IF;
   END IF;
 __GENERATED_OBJECTS__
-  -- Adopt a manual V001 install or complete a compatible interrupted baseline.
+  -- Adopt verified manual versions or complete compatible interrupted creation.
   -- Never modify application rows. Existing APPLIED history keeps its timestamp.
-  EXECUTE IMMEDIATE
-    'MERGE INTO INIT$_TB_BAPS_HISTORY t USING (SELECT :version AS version, :checksum AS checksum FROM dual) s
-       ON (t.VERSION = s.version)
-     WHEN MATCHED THEN UPDATE SET t.STATUS = ''APPLIED'', t.APPLIED_AT = :updated_at WHERE t.STATUS = ''RUNNING''
-     WHEN NOT MATCHED THEN INSERT (VERSION, CHECKSUM, APPLIED_AT, STATUS)
-       VALUES (s.version, s.checksum, :created_at, ''APPLIED'')'
-    USING c_version, c_checksum,
-          TO_CHAR(SYS_EXTRACT_UTC(SYSTIMESTAMP), 'YYYY-MM-DD"T"HH24:MI:SS') || '+00:00',
-          TO_CHAR(SYS_EXTRACT_UTC(SYSTIMESTAMP), 'YYYY-MM-DD"T"HH24:MI:SS') || '+00:00';
+__RECORD_MIGRATIONS__
   COMMIT;
   DBMS_OUTPUT.PUT_LINE('IN-BAPS Oracle installation verified. Re-running this file preserves application data.');
 END;

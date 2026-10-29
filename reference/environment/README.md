@@ -22,7 +22,7 @@ VS Code 새 터미널은 `.vscode/settings.json`의 `IN-BAPS PowerShell` 프로�
 
 ## 고정 의존성과 오프라인 설치
 
-회원/DBMS 구현의 주요 런타임 의존성에는 FastAPI, python-oracledb, cryptography, sqlglot이 포함됩니다. `cryptography==50.0.2`, `sqlglot==30.25.0`까지 루트·참조 requirements·lock에 반영했고 sqlglot wheel과 설치파일 SHA 목록을 갱신했습니다.
+회원/DBMS 구현의 주요 런타임 의존성에는 FastAPI, python-oracledb, cryptography, sqlglot이 포함됩니다. 고급 분석은 `numpy==2.3.3`, `scipy==1.16.2`, `statsmodels==0.14.5`, `scikit-learn==1.7.2`, `threadpoolctl==3.6.0`을 사용하고 XML 수집은 `defusedxml==0.7.1`을 사용합니다. 루트·참조 requirements·간접 의존성 lock과 설치파일 SHA 목록을 함께 갱신했습니다. Windows Python 3.12 wheel은 `installers/`, Linux CPython 3.12 wheel은 `installers/linux-py312/`에 보관합니다. 다른 OS·Python 버전은 그 환경의 wheel을 별도 준비하세요.
 
 ```powershell
 & .\.local\ops\setup.ps1 -PrepareOffline
@@ -55,6 +55,7 @@ API 회귀검사용 패키지는 다음과 같이 설치합니다. Render 런타
 | `BAPS_SESSION_IDLE_MINUTES` | 유휴 만료, 기본 30분 |
 | `BAPS_SESSION_MAX_HOURS` | 최대 세션 수명, 기본 8시간 |
 | `BAPS_SYSTEM_POOL_MAX` | 프로세스별 SYSTEM Oracle 연결 상한, 기본 4·1~16, 변경 후 재시작 |
+| `OPENBLAS_NUM_THREADS`, `OMP_NUM_THREADS`, `MKL_NUM_THREADS` | Render 수치 라이브러리 스레드 수 1, 분석 코드도 실행 시 1로 제한 |
 | `BAPS_ALLOWED_HOSTS`, `BAPS_PUBLIC_ORIGIN` | 허용 호스트와 정확한 공개 출처 |
 | `BAPS_MODULES` | C-BAP/R-BAP/V-BAP 독립 활성화 |
 
@@ -96,7 +97,9 @@ Render 기본 공개 출처는 `RENDER_EXTERNAL_HOSTNAME`에서 구성합니다.
 
 읽기 전용 DB 진단은 `python scripts/check_database.py`로 실행합니다. 설정의 존재 여부·Wallet 파일 존재 여부·Oracle 연결·회원/세션 테이블 접근만 확인하며 비밀번호와 설정값은 출력하지 않습니다. `/api/health`는 웹 프로세스의 생존 확인이므로 DB 접속 성공을 보장하지 않습니다.
 
-SYSTEM 설치·quota·회원 생성이 준비되어야 정상 서비스를 사용할 수 있습니다. Git/Render 설정 파일을 준비한 사실을 실제 push·공개 배포 성공으로 간주하지 않습니다. 현재 공개 배포는 검증 완료 상태가 아닙니다.
+SYSTEM 설치·quota·회원 생성이 준비되어야 정상 서비스를 사용할 수 있습니다. V002 적용으로 Open API 설정·일정·이력 테이블을 준비합니다. `render.yaml`의 별도 `in-baps-collection` Cron 서비스는 같은 빌드 명령과 `python -m backend.collection_worker --once` 시작 명령을 사용하고 5분마다 예정 작업을 조회합니다. 웹의 Oracle 환경값·암호화 키는 서비스 참조로 공유하지만 **Cron에도 Wallet Secret Files를 따로 등록**해야 합니다. Cron은 별도 과금 서비스이며 웹의 무료 요금제에 포함된 내장 스케줄러가 아닙니다. 상세 범위와 공식 문서는 [수집·분석 운영 안내](../architecture/COLLECTION_ANALYTICS.md)에 있습니다.
+
+Git/Render 설정 파일을 준비한 사실을 실제 push·공개 배포 성공으로 간주하지 않습니다. 현재 공개 배포는 검증 완료 상태가 아닙니다.
 
 ## 단축 명령·백업
 

@@ -3,15 +3,16 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from backend import config
 from backend.api import router
 from backend.auth_api import router as auth_router
 from backend.target_api import router as target_router
+from backend.collection_api import router as collection_router
 from backend.auth import initialize_admin
 from backend.database import close_pool, initialize
 from backend.middleware import BodyLimitMiddleware
+from backend.frontend_assets import FrontendAssets, VersionedStaticFiles
 
 logger = logging.getLogger('inbaps')
 
@@ -52,7 +53,9 @@ async def security_headers(request: Request, call_next):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['Referrer-Policy'] = 'same-origin'
     response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+    nonce = getattr(request.state, 'asset_nonce', None)
+    script_policy = "'self'" + (" 'nonce-" + nonce + "'" if nonce else '')
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src " + script_policy + "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
     if request.url.path.startswith('/api/'):
         response.headers['Cache-Control'] = 'no-store'
     return response
@@ -67,9 +70,11 @@ async def unhandled_error(request, exc):
 app.include_router(router)
 app.include_router(auth_router)
 app.include_router(target_router)
+app.include_router(collection_router)
 frontend = config.ROOT / 'frontend'
 frontend.mkdir(exist_ok=True)
-app.mount('/static', StaticFiles(directory=str(frontend)), name='static')
+frontend_assets = FrontendAssets(frontend)
+app.mount('/static', VersionedStaticFiles(assets=frontend_assets, directory=str(frontend)), name='static')
 
 
 @app.get('/favicon.ico', include_in_schema=False)
@@ -83,8 +88,8 @@ def web_manifest():
 
 
 @app.get('/', include_in_schema=False)
-def index():
+def index(request: Request):
     path = frontend / 'index.html'
     if not path.exists():
         return JSONResponse({'service': 'IN-BAPS', 'detail': 'Frontend is being prepared.'})
-    return FileResponse(path)
+    return frontend_assets.index_response(request)

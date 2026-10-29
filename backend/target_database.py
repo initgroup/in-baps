@@ -30,7 +30,8 @@ from backend.database import connection, get_record, json_document, list_records
 
 MANAGED_PREFIX = 'INIT$_TB_BAPS_C_'
 PROTECTED = ('INIT$_TB_BAPS_MEMBER', 'INIT$_TB_BAPS_SESSION', 'INIT$_TB_BAPS_CONNECTION',
-             'INIT$_TB_BAPS_HISTORY', 'INIT$_TB_BAPS_RECORD', 'INIT$_TB_BAPS_SCHEMA')
+             'INIT$_TB_BAPS_HISTORY', 'INIT$_TB_BAPS_RECORD', 'INIT$_TB_BAPS_SCHEMA',
+             'INIT$_TB_BAPS_API_SOURCE', 'INIT$_TB_BAPS_API_JOB', 'INIT$_TB_BAPS_API_RUN')
 SAFE_ANONYMOUS = {'NVL', 'NVL2', 'DECODE', 'TO_CHAR', 'TO_DATE', 'TO_TIMESTAMP', 'TO_NUMBER',
                   'TRUNC', 'ROUND', 'REGEXP_REPLACE', 'REGEXP_SUBSTR', 'REGEXP_LIKE',
                   'ADD_MONTHS', 'MONTHS_BETWEEN', 'LAST_DAY', 'INSTR', 'SUBSTR', 'LENGTH',
@@ -353,12 +354,12 @@ def materialize_dataset(dataset, user):
             'truncated': result['truncated'], 'queried_at': utcnow()}
 
 
-def register_dataset(record, user, name, sql, binds, module, limit=20000, table=None, sample=False, result=None):
+def register_dataset(record, user, name, sql, binds, module, limit=20000, table=None, sample=False, result=None, collection_type='sql'):
     if module not in config.ENABLED_MODULES:
         raise HTTPException(403, '선택한 모듈이 활성화되어 있지 않습니다.')
     if result is None:
         result = fetch_query(record, user, sql, binds, limit)
-    payload = {'id': uuid.uuid4().hex, 'name': name, 'module': module, 'source': 'target-sql',
+    payload = {'id': uuid.uuid4().hex, 'name': name, 'module': module, 'source': 'target-sql', 'collection_type': 'sample' if sample else collection_type,
                'description': '명시적으로 생성하여 실제 TARGET DB에 적재한 합성 샘플' if sample else 'TARGET DB SQL 실시간 조회',
                'synthetic': sample, 'created_at': utcnow(), 'row_count': result['row_count'],
                'columns': result['columns'], 'truncated': result.get('truncated', False),
@@ -434,7 +435,7 @@ def remember_table(record, user, table):
             cur.execute(statements()['CONNECTION_UPDATE_CONFIG'], params)
 
 
-def import_rows(record, user, name, rows, module='C-BAP', sample=False):
+def import_rows(record, user, name, rows, module='C-BAP', sample=False, collection_type='json'):
     if module not in config.ENABLED_MODULES:
         raise HTTPException(403, '선택한 모듈이 활성화되어 있지 않습니다.')
     if not record['config'].get('allow_dml'):
@@ -466,7 +467,7 @@ def import_rows(record, user, name, rows, module='C-BAP', sample=False):
     result = {'rows': rows, 'columns': columns, 'row_count': len(rows), 'truncated': False}
     try:
         remember_table(record, user, table)
-        payload = register_dataset(record, user, name, select, {}, module, table=table, sample=sample, result=result)
+        payload = register_dataset(record, user, name, select, {}, module, table=table, sample=sample, result=result, collection_type=collection_type)
     except Exception:
         raise HTTPException(500, f'TARGET 테이블 {table} 적재는 완료했으나 SYSTEM 카탈로그 등록에 실패했습니다. 테이블은 보존되었으며 관리자에게 DDL 기록을 확인해 달라고 요청하세요.') from None
     return {**payload, 'ddl_file': ddl_file}

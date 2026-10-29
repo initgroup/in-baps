@@ -26,6 +26,19 @@ class OracleInstallerTests(unittest.TestCase):
         self.assertIn(hashlib.sha256((DDL / 'V001__baseline.sql').read_bytes()).hexdigest(), sql)
         self.assertLess(sql.index('No writable quota'), sql.index("ensure_table('INIT$_TB_BAPS_HISTORY'"))
 
+    def test_collection_installer_is_complete_nullable_and_checksum_guarded(self):
+        sql = render()
+        version = DDL / 'V002__open_api_collection.sql'
+        for piece in migrate.split_statements(version.read_text(encoding='utf-8')):
+            statement = re.sub(r'^--[^\n]*\n?', '', piece, flags=re.M).strip()
+            self.assertIn("'" + statement.replace("'", "''") + "'", sql)
+        self.assertIn(hashlib.sha256(version.read_bytes()).hexdigest(), sql)
+        self.assertIn("assert_column('INIT$_TB_BAPS_API_SOURCE', 'LOCK_TOKEN', 'VARCHAR2', 64, 'Y')", sql)
+        self.assertIn("assert_migration('V002__open_api_collection.sql'", sql)
+        self.assertIn("record_migration('V002__open_api_collection.sql'", sql)
+        self.assertIn('Unknown migrations exist', sql)
+        self.assertNotIn('__KNOWN_VERSIONS__', sql)
+
     def test_install_requires_schema_and_checks_it_before_block(self):
         executed = []
         class Cursor:
