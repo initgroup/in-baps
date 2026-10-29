@@ -91,6 +91,9 @@ main{padding:20px 35px 28px;min-height:calc(100vh - 118px);max-width:1840px;marg
 .section-title .label-group{display:flex;align-items:center;gap:10px}
 .soft-tag{font-size:0.75rem;padding:2px 7px;border-radius:4px;background:#edf0f3;color:var(--muted);font-weight:500}
 .module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+#overview-page .overview-metrics{margin-top:20px}
+#overview-page .data-table td p{font-size:.8125rem;margin-top:5px}
+#overview-page .data-table td .button+.button{margin-left:6px}
 .module-card{background:#fff;border:1px solid var(--line);border-radius:9px;padding:16px 17px;display:flex;gap:14px;align-items:center;position:relative}
 .module-icon{height:38px;width:38px;border-radius:9px;display:grid;place-items:center;background:#fdf1eb;color:#df8a59}
 .module-icon.teal{color:#4d9894;background:#eaf5f2}

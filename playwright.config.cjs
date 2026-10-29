@@ -12,10 +12,12 @@ const modes=[
  // fixture accounts against one process would exceed the real signup limit.
  {name:'collection',port:8014,modules:'C-BAP,R-BAP,V-BAP',testMatch:'collection-ui.spec.cjs'},
  {name:'advanced',port:8015,modules:'C-BAP,R-BAP,V-BAP',testMatch:'ui.spec.cjs',grep:/advanced statistical parameters|\[Workspace lists\]/},
+ {name:'review',port:8016,modules:'C-BAP,R-BAP,V-BAP',testMatch:'review-ui.spec.cjs'},
+ {name:'context',port:8026,modules:'C-BAP,R-BAP,V-BAP',testMatch:'context-scope.spec.cjs'},
 ];
 
 module.exports=defineConfig({
- testDir:'./tests',testMatch:['ui.spec.cjs','collection-ui.spec.cjs'],fullyParallel:false,workers:1,
+ testDir:'./tests',testMatch:['ui.spec.cjs','collection-ui.spec.cjs','review-ui.spec.cjs','context-scope.spec.cjs'],fullyParallel:false,workers:1,
  timeout:60000,expect:{timeout:10000},retries:0,
  outputDir:'.runtime/qa/playwright-results',
  reporter:[['list'],['html',{outputFolder:'.runtime/qa/playwright-report',open:'never'}]],

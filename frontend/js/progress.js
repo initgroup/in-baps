@@ -85,7 +85,7 @@ export function uploadRequest(url,options,task){
   xhr.open(options.method||'POST',url);
   for(const [key,value] of new Headers(options.headers))xhr.setRequestHeader(key,value);
   xhr.upload.onprogress=e=>task?.update({label:'파일 전송 중',completed:e.lengthComputable?e.loaded:null,total:e.lengthComputable?e.total:null,detail:e.lengthComputable?`${(e.loaded/1048576).toFixed(1)} / ${(e.total/1048576).toFixed(1)} MB 전송`:'파일을 서버로 전송하고 있습니다.'});
-  xhr.upload.onload=()=>task?.update({label:'TARGET DB에 파일 적재 중',completed:null,total:null,detail:'파일 전송 완료 · 서버에서 검증하고 DB에 저장 중입니다.'});
+  xhr.upload.onload=()=>task?.update({label:url.includes('/datasets/preview')?'파일 구조·품질 확인 중':'파일 저장 요청 처리 중',completed:null,total:null,detail:url.includes('/datasets/preview')?'파일 전송 완료 · 전체 행을 검증하고 있습니다. 미리보기는 데이터를 저장하지 않습니다.':'파일 전송 완료 · 서버에서 검증하고 선택한 저장 대상으로 처리 중입니다.'});
   xhr.onload=()=>{cleanup();resolve({ok:xhr.status>=200&&xhr.status<300,status:xhr.status,headers:{get:name=>xhr.getResponseHeader(name)},json:async()=>JSON.parse(xhr.responseText)});};
   xhr.onerror=()=>{cleanup();reject(new TypeError('네트워크 연결 실패'));};
   xhr.onabort=()=>{cleanup();reject(new DOMException('요청이 취소되었습니다.','AbortError'));};

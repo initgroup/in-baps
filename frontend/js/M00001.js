@@ -1,28 +1,57 @@
-import {state,inputModule,esc,num,compact,pageHead,datasetSelect,loadSelected,icons,importDialog,exportCSV,disposeCharts,label,columns,numericColumns,empty} from './core.js';
-import {chart,buildOption,grouped,axis,grid,palette} from './charts.js';
-let period='all',region='all';
-export async function render(){
- disposeCharts();const el=document.querySelector('#overview-page');
- el.innerHTML=pageHead('YOUR DATA. CONNECTED.','인법스 개요','흩어진 데이터에서 하나의 인사이트로. 더 나은 의사결정을 시작하세요.',`<button class="button" id="export-overview"><i data-lucide="download"></i>데이터 내보내기</button><button class="button primary" id="new-insight"><i data-lucide="plus"></i>새 인사이트</button>`)+
- `<div class="module-grid">${[['C-BAP','데이터 수집','다양한 원천을 하나의 데이터로','download','orange','M01001'],['R-BAP','데이터 분석','데이터 속 의미와 패턴 발견','flask-conical','teal','M02001'],['V-BAP','데이터 뷰어','복잡한 정보를 명확한 인사이트로','chart-no-axes-combined','purple','M03001']].map((m,i)=>`<a href="#${m[5]}" class="module-card"><div class="module-icon ${m[4]}"><i data-lucide="${m[3]}"></i></div><div><h3>${m[0]}<span>${m[1]}</span></h3><p>${m[2]}</p></div><span class="icon-button"><i data-lucide="arrow-up-right"></i></span>${i<2?'<span class="connection"><i data-lucide="arrow-right"></i></span>':''}</a>`).join('')}</div>
- <div class="filterbar"><div class="filter-left">${datasetSelect()}<span class="soft-tag">${state.dataset?.synthetic?'SYNTHETIC · DB':state.dataset?.source==='target-sql'?'LIVE SQL':'DATASET'}</span></div><div class="filter-right"><span class="live-label"><span class="status-dot"></span>조회 데이터 기준</span><select id="region-filter" aria-label="지역 필터"><option value="all">전체 지역</option>${[...new Set(state.rows.map(r=>r.region).filter(Boolean))].map(r=>`<option ${region===r?'selected':''}>${esc(r)}</option>`).join('')}</select><select id="period-filter" aria-label="기간 필터"><option value="all">전체 기간</option><option value="7" ${period==='7'?'selected':''}>최근 데이터 7일</option><option value="14" ${period==='14'?'selected':''}>최근 데이터 14일</option></select></div></div><div id="overview-content"></div>`;
- document.querySelector('#dataset-select').onchange=async e=>{state.selected=e.target.value;region='all';await loadSelected();render();};
- document.querySelector('#region-filter').onchange=e=>{region=e.target.value;draw();};document.querySelector('#period-filter').onchange=e=>{period=e.target.value;draw();};
- document.querySelector('#export-overview').onclick=()=>exportCSV(filteredRows());document.querySelector('#new-insight').onclick=()=>location.hash='M03001';draw();icons();
+import {state,inputModule,esc,num,pageHead,icons,importDialog,disposeCharts,api,empty} from './core.js';
+import {datasetKind,kindNames} from './choice-list.js';
+import {analysisName} from './advanced-analysis.js';
+import {loadVisualization,selectVisualizationDataset} from './M03001.js';
+
+let viewEpoch=0;
+export function destroy(){viewEpoch++;}
+const modules=[['C-BAP','데이터 수집','API·파일을 선택한 TARGET에 수집','download','orange','M01001'],['R-BAP','통계 분석','기존 DB 또는 직접 입력으로 개별 분석','flask-conical','teal','M02001'],['V-BAP','시각화','기존 DB 또는 직접 입력으로 차트 탐색','chart-no-axes-combined','purple','M03001']];
+const time=value=>{const result=typeof value==='number'?value*1000:Date.parse(value||'');return Number.isFinite(result)?result:0;};
+const date=value=>time(value)?new Date(time(value)).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}):'시각 정보 없음';
+
+// Metadata only: do not sum arbitrary numeric values or infer business units.
+export function overviewModel(datasets,visualizations,analyses,runs){
+ const recentDatasets=[...datasets].sort((a,b)=>time(b.updated_at||b.created_at)-time(a.updated_at||a.created_at)||String(a.name).localeCompare(String(b.name),'ko-KR')).slice(0,6);
+ const activities=[...analyses.map(item=>({...item,kind:'analysis',at:item.created_at})),...visualizations.map(item=>({...item,kind:'visualization',at:item.updated_at||item.created_at})),...runs.map(item=>({...item,kind:'collection',at:item.finished_at||item.started_at}))].sort((a,b)=>time(b.at)-time(a.at)).slice(0,6);
+ return {datasetCount:datasets.length,sqlCount:datasets.filter(item=>item.source==='target-sql').length,analysisCount:analyses.length,visualizationCount:visualizations.length,
+  recentDatasets,activities,collectionWarnings:runs.filter(item=>['FAILED','UNKNOWN','INTERRUPTED'].includes(item.status)),syntheticCount:datasets.filter(item=>item.synthetic).length};
 }
-function filteredRows(){let rows=state.rows.filter(r=>region==='all'||r.region===region);if(period!=='all'&&rows.some(r=>r.date)){const latest=Math.max(...rows.map(r=>Date.parse(r.date)).filter(Number.isFinite));rows=rows.filter(r=>Date.parse(r.date)>latest-Number(period)*86400000);}return rows;}
-function draw(){
- disposeCharts();const rows=filteredRows(),el=document.querySelector('#overview-content');if(!rows.length){el.innerHTML=empty('분석할 데이터를 연결하세요','기존 DB를 연결해 바로 조회하거나 파일을 TARGET DB에 적재하세요.','<a class="button" href="#M90002">DB 연결 설정</a> <a class="button" href="#M90003">SQL 조회</a> <button class="button primary" id="first-import">데이터 가져오기</button>');document.querySelector('#first-import').onclick=()=>importDialog(inputModule(),render);icons();return;}
- const keys=columns(),nums=numericColumns();const x=keys.includes('date')?'date':keys[0],y=nums.includes('revenue')?'revenue':nums[0],category=keys.includes('channel')?'channel':keys.find(k=>k!==x&&!nums.includes(k))||x,second=keys.includes('region')?'region':keys.find(k=>k!==category&&!nums.includes(k))||x;
- const sum=k=>rows.reduce((a,r)=>a+(Number(r[k])||0),0);const valid=rows.reduce((a,r)=>a+keys.filter(k=>r[k]!==null&&r[k]!==undefined&&r[k]!=='').length,0);const quality=100*valid/(rows.length*keys.length||1);
- const metrics=[['데이터 레코드',num(rows.length),'건','database','현재 선택 데이터'],[label(y||'수치 합계'),compact(sum(y)),y==='revenue'?'원':'','chart-no-axes-combined','선택한 수치의 합계'],['데이터 완전성',quality.toFixed(1),'%','shield-check','전체 셀의 유효값 비율'],['저장한 인사이트',num(state.visualizations.length),'개','bookmark','다시 꺼내 보는 의사결정']];
- el.innerHTML=`<div class="metric-grid">${metrics.map(m=>`<article class="metric"><div class="metric-top">${esc(m[0])}<i data-lucide="${m[3]}"></i></div><div class="metric-value">${m[1]}<small>${m[2]}</small></div><div class="metric-bottom"><b>●</b>${m[4]}</div></article>`).join('')}</div>
- <div class="section-title"><div class="label-group"><h2>데이터가 보여주는 흐름</h2><span class="soft-tag">IN-SIGHT</span></div><a class="button text" href="#M03001">시각화 스튜디오 <i data-lucide="arrow-up-right"></i></a></div>
- <div class="chart-grid" style="margin-top:0"><article class="panel"><div class="panel-head"><div><span class="eyebrow">TREND ANALYSIS</span><h2>${esc(label(y))} 추이</h2><p>${esc(label(x))}별 변화를 통해 전체 흐름을 살펴보세요.</p></div><div class="legend"><span><i></i>${esc(label(y))}</span></div></div><div class="chart" id="trend-chart" role="img" aria-label="${esc(label(y))} 추이 차트"></div><div class="chart-annotation"><i data-lucide="mouse-pointer-2"></i>차트 위에 마우스를 올리면 상세 수치를 확인할 수 있습니다.</div></article>
- <article class="panel"><div class="panel-head"><div><span class="eyebrow">COMPOSITION</span><h2>${esc(label(category))}별 구성</h2><p>전체 ${esc(label(y))}에서 차지하는 비중</p></div><span class="soft-tag">비중</span></div><div class="donut-wrapper"><div class="chart" id="composition-chart" role="img" aria-label="범주별 구성 차트"></div><div class="donut-center">${[...new Set(rows.map(r=>r[category]))].length}<small>${esc(label(category))} 범주</small></div></div><div class="chart-annotation"><i data-lucide="circle-info"></i>범례를 클릭하면 범주를 선택할 수 있습니다.</div></article></div>
- <div class="chart-grid equal"><article class="panel"><div class="panel-head"><div><span class="eyebrow">CROSS EXPLORATION</span><h2>${esc(label(second))} × ${esc(label(category))} 교차 탐색</h2><p>색의 농도로 ${esc(label(y))}의 집중도를 확인하세요.</p></div><i data-lucide="grid-3x3" style="color:#adb8c4;width:15px"></i></div><div id="heat-chart" class="chart" role="img" aria-label="교차 분포 히트맵"></div></article>
- <article class="panel"><div class="panel-head"><div><span class="eyebrow">TOP CONTRIBUTORS</span><h2>${esc(label(second))}별 ${esc(label(y))} 순위</h2><p>가장 큰 기여를 만드는 데이터</p></div><span class="soft-tag">TOP 5</span></div><div class="rank-list" id="rank-list"></div><div class="panel-foot"><span>등록 데이터에서 실시간 계산</span><a href="#M02001">상세 분석 →</a></div></article></div>
- <div class="insight-strip"><i data-lucide="sparkles"></i><div><strong>좋은 인사이트는 유연한 연결에서 시작됩니다.</strong><p>R-BAP과 V-BAP에 파일을 직접 가져오거나, C-BAP에서 준비한 데이터를 이어서 사용하세요.</p></div><button class="button small" id="overview-import">데이터 연결 <i data-lucide="arrow-right"></i></button></div>`;
- chart('#trend-chart',buildOption('area',rows,{x,y}));chart('#composition-chart',buildOption('pie',rows,{x:category,y}));chart('#heat-chart',buildOption('heatmap',rows,{x:category,y,secondary:second}));
- const ranking=grouped(rows,second,y).sort((a,b)=>b.value-a.value).slice(0,5),max=ranking[0]?.value||1;document.querySelector('#rank-list').innerHTML=ranking.map((r,i)=>`<div class="rank-row"><span class="rank">${String(i+1).padStart(2,'0')}</span><div>${esc(r.name)}<div class="rank-track"><i style="width:${Math.max(0,r.value/max*100)}%"></i></div></div><span class="rank-value">${compact(r.value)}</span></div>`).join('');document.querySelector('#overview-import').onclick=()=>importDialog(inputModule(),render);icons();
+
+export async function render(){
+ const token=++viewEpoch,owner=state.user?.id;disposeCharts();const el=document.querySelector('#overview-page');
+ el.innerHTML=pageHead('YOUR WORKSPACE','인법스 개요','최근 데이터와 작업을 확인하고, 필요한 분석·시각화로 이어가세요.',`<a class="button" href="#M04001"><i data-lucide="database"></i>데이터 카탈로그</a><button class="button primary" id="overview-import"><i data-lucide="upload"></i>데이터 가져오기</button>`)+`<div class="module-grid">${modules.filter(item=>state.modules.includes(item[0])).map(item=>`<a href="#${item[5]}" class="module-card"><div class="module-icon ${item[4]}"><i data-lucide="${item[3]}"></i></div><div><h3>${item[1]}<span>${item[0]}</span></h3><p>${item[2]}</p></div><span class="icon-button"><i data-lucide="arrow-up-right"></i></span></a>`).join('')}</div><div id="overview-content"><p class="collection-note" role="status">최근 작업 현황을 확인하고 있습니다.</p></div>`;
+ document.querySelector('#overview-import').onclick=()=>importDialog(inputModule(),render);icons();
+ const results=await Promise.allSettled([state.modules.includes('R-BAP')?api('/analyses?summary=true',{feedback:false}):Promise.resolve([]),state.modules.includes('C-BAP')?api('/collection/runs',{feedback:false}):Promise.resolve([])]);
+ if(token!==viewEpoch||state.user?.id!==owner||state.page!=='M00001'||!el.isConnected)return;
+ const [analysisResult,runResult]=results,analyses=analysisResult.status==='fulfilled'?analysisResult.value:[],runs=runResult.status==='fulfilled'?runResult.value:[];
+ draw(overviewModel(state.datasets,state.visualizations,analyses,runs),{analysisError:analysisResult.status==='rejected',runError:runResult.status==='rejected'});
+}
+
+function draw(model,{analysisError,runError}){
+ const hasResearch=state.modules.includes('R-BAP'),hasVisual=state.modules.includes('V-BAP');
+ const metrics=[['등록 데이터셋',model.datasetCount,'개','database','카탈로그에 등록된 데이터'],['DB SQL 데이터셋',model.sqlCount,'개','square-terminal','열 때 TARGET을 다시 조회'],['최근 저장 분석',hasResearch?(analysisError?'조회 실패':model.analysisCount):'비활성',hasResearch?'건':'','flask-conical','최근 200개 분석 이력 범위'],['저장 차트',hasVisual?model.visualizationCount:'비활성',hasVisual?'개':'','bookmark','저장 설정 · 열 때 데이터 조회']];
+ const root=document.querySelector('#overview-content');
+ root.innerHTML=`<div class="metric-grid overview-metrics">${metrics.map(item=>`<article class="metric"><div class="metric-top">${item[0]}<i data-lucide="${item[3]}"></i></div><div class="metric-value">${typeof item[1]==='number'?num(item[1]):esc(item[1])}<small>${item[2]}</small></div><div class="metric-bottom">${item[4]}</div></article>`).join('')}</div>
+ <p class="info-note">업무 KPI는 지표·단위·집계·기간·비교 기준을 정의한 뒤 확인해야 합니다. 이 개요는 등록 메타데이터와 작업 이력을 표시하며 원본 데이터의 수치 합계나 품질을 자동 판단하지 않습니다.</p>
+ ${runError?'<div class="db-link-note" role="status"><span>최근 수집 이력을 읽지 못했습니다. C-BAP에서 실행 이력을 확인하세요.</span><a class="button small" href="#M01001">수집 화면</a></div>':''}
+ ${model.collectionWarnings.length?`<div class="db-link-note" role="status"><span>최근 수집 이력 100개 범위에 실패·결과 확인 필요 기록이 ${num(model.collectionWarnings.length)}건 있습니다. 자동 재실행 전에 실행 이력을 확인하세요.</span><a class="button small" href="#M01001">실행 이력 확인</a></div>`:''}
+ ${model.syntheticCount?`<p class="info-note">합성 예제 데이터 ${num(model.syntheticCount)}개가 카탈로그에 포함되어 있습니다.</p>`:''}
+ ${model.datasetCount?`<div class="chart-grid equal"><section class="panel"><div class="panel-head"><div><span class="eyebrow">RECENT DATA</span><h2>최근 등록·변경 데이터</h2><p>카탈로그 기록 기준 · 행 데이터는 열 때 조회합니다.</p></div><a class="button small" href="#M04001">전체 목록</a></div><div class="table-wrap"><table class="data-table"><thead><tr><th>데이터셋</th><th>수집유형</th><th>활용</th></tr></thead><tbody>${model.recentDatasets.map(item=>`<tr><td><strong>${esc(item.name)}</strong><p>${num(item.columns?.length||0)}컬럼 · ${esc(date(item.updated_at||item.created_at))}</p></td><td><span class="soft-tag">${esc(kindNames[datasetKind(item)]||'데이터')}</span></td><td>${state.modules.includes('R-BAP')?`<button class="button small" data-overview-analysis="${esc(item.id)}">분석</button>`:''}${state.modules.includes('V-BAP')?`<button class="button small" data-overview-visual="${esc(item.id)}">시각화</button>`:''}</td></tr>`).join('')}</tbody></table></div></section><section class="panel"><div class="panel-head"><div><span class="eyebrow">RECENT WORK</span><h2>최근 작업·이어서 하기</h2><p>분석은 실행 당시 결과, 저장 차트는 최신 데이터 조회입니다.</p></div>${state.modules.includes('V-BAP')?'<a class="button small" href="#M03002">저장한 인사이트</a>':''}</div>${activitiesHTML(model.activities)}</section></div>`:empty('분석할 데이터를 연결하세요','기존 DB를 SQL로 조회하거나 파일을 직접 분석·시각화할 수 있습니다. C-BAP 수집은 선택한 TARGET에 적재합니다.','<a class="button" href="#M90002">DB 연결 설정</a> <a class="button" href="#M90003">SQL 조회</a> <button class="button primary" id="first-import">데이터 가져오기</button>')}`;
+ if(!model.datasetCount&&model.activities.length)root.insertAdjacentHTML('beforeend',`<section class="panel"><div class="panel-head"><div><h2>최근 작업</h2><p>데이터셋 등록이 삭제되어도 실행 당시의 분석 이력은 남아 있습니다.</p></div></div>${activitiesHTML(model.activities)}</section>`);
+ root.querySelector('#first-import')?.addEventListener('click',()=>importDialog(inputModule(),render));
+ root.querySelectorAll('[data-overview-analysis]').forEach(button=>button.onclick=()=>{state.selected=button.dataset.overviewAnalysis;location.hash='M02001';});
+ root.querySelectorAll('[data-overview-visual]').forEach(button=>button.onclick=()=>{selectVisualizationDataset(button.dataset.overviewVisual);location.hash='M03001';});
+ root.querySelectorAll('[data-overview-chart]').forEach(button=>button.onclick=()=>{const item=state.visualizations.find(item=>item.id===button.dataset.overviewChart);if(item){loadVisualization(item);location.hash='M03001';}});
+ icons();
+}
+
+function activitiesHTML(activities){
+ if(!activities.length)return '<div class="empty-state"><h3>아직 저장된 작업이 없습니다</h3><p>분석을 실행하거나 차트를 저장하면 최근 작업을 확인할 수 있습니다.</p></div>';
+ const status={SUCCEEDED:'수집 완료',FAILED:'수집 실패',UNKNOWN:'저장 결과 확인 필요',INTERRUPTED:'중단 확인 필요',RUNNING:'실행 중'};
+ return `<div class="table-wrap"><table class="data-table"><thead><tr><th>작업</th><th>기준시점</th><th>활용</th></tr></thead><tbody>${activities.map(item=>{
+  const title=item.kind==='analysis'?analysisName(item.method):item.kind==='visualization'?item.name:status[item.status]||'수집 이력';
+  const description=item.kind==='analysis'?item.dataset_name:item.kind==='visualization'?item.dataset_name:(item.result?.message||'C-BAP 실행 이력에서 원천과 적재 결과를 확인하세요.');
+  const action=item.kind==='analysis'?(state.datasets.some(dataset=>dataset.id===item.dataset_id)?`<button class="button small" data-overview-analysis="${esc(item.dataset_id)}">분석 화면</button>`:'<span class="soft-tag">데이터셋 등록 삭제됨</span>'):item.kind==='visualization'?`<button class="button small" data-overview-chart="${esc(item.id)}">저장 차트 열기</button>`:'<a class="button small" href="#M01001">수집 이력</a>';
+  return `<tr><td><strong>${esc(title)}</strong><p>${esc(description)}</p></td><td>${esc(date(item.at))}<p>${item.kind==='analysis'?'실행 당시 결과':item.kind==='visualization'?'열 때 최신 데이터':'실행 이력'}</p></td><td>${action}</td></tr>`;
+ }).join('')}</tbody></table></div>`;
 }

@@ -336,7 +336,7 @@ test('membership login roundtrip, role menus and explicit session extension',asy
 });
 
 async function verifyStartupRequests(page){
- await expect(page.locator('#trend-chart canvas')).toBeVisible();
+ await expect(page.locator('.overview-metrics')).toBeVisible();
  await route(page,'M90002','DB 연결 설정');
  const details=[];page.on('request',request=>{if(/\/api\/datasets\/[^/?]+\?/.test(request.url()))details.push(request.url());});
  let datasetStarted,visualizationStarted,release;
@@ -354,22 +354,23 @@ async function verifyStartupRequests(page){
  await expect(page.locator('#page-loading')).not.toBeVisible();
  expect(details,'Metadata-only entry does not query the selected TARGET').toHaveLength(0);
  await page.unroute('**/api/datasets');await page.unroute('**/api/visualizations');
- await route(page,'M00001','인법스 개요');await expect(page.locator('#trend-chart canvas')).toBeVisible();
- expect(details,'Overview queries fresh rows once').toHaveLength(1);
+ await route(page,'M00001','인법스 개요');await expect(page.locator('.overview-metrics')).toBeVisible();
+ expect(details,'Overview uses metadata without querying TARGET rows').toHaveLength(0);
  details.length=0;
- await page.reload();await expect(page.locator('#trend-chart canvas')).toBeVisible();
+ await page.reload();await expect(page.locator('.overview-metrics')).toBeVisible();
  await expect(page.locator('#page-loading')).not.toBeVisible();
- expect(details,'Login/session entry queries selected rows once').toHaveLength(1);
+ expect(details,'Login/session overview uses metadata only').toHaveLength(0);
  await route(page,'M02001','R-BAP 데이터 분석');
- expect(details,'A later data screen still reads fresh rows').toHaveLength(2);
+ expect(details,'A later analysis screen reads fresh rows once').toHaveLength(1);
 }
 
-test('explicit dashboard data, filters, desktop/mobile layout and member menu routes',async({page})=>{
- await explicitDataset(page);await verifyStartupRequests(page);await route(page,'M00001','인법스 개요');await selectDataset(page,fixtureName);
- for(const id of ['trend-chart','composition-chart','heat-chart'])await expect(page.locator('#'+id+' canvas')).toBeVisible();
- await page.locator('#region-filter').selectOption({label:'서울'});await expect(page.locator('.metric-value').first()).toContainText('2');
- await page.locator('#region-filter').selectOption('all');await page.locator('#period-filter').selectOption('7');await expect(page.locator('.metric-value').first()).toContainText('2');
- await page.locator('#period-filter').selectOption('all');await expect(page.locator('.metric-value').first()).toContainText('4');
+test('workspace metadata overview, desktop/mobile layout and member menu routes',async({page})=>{
+ await explicitDataset(page);await verifyStartupRequests(page);await route(page,'M00001','인법스 개요');
+ await expect(page.locator('.overview-metrics .metric')).toHaveCount(4);
+ await expect(page.locator('.metric-value').first()).toContainText('1');
+ await expect(page.locator('#overview-content')).toContainText(fixtureName);
+ await expect(page.locator('#trend-chart,#composition-chart,#heat-chart,#region-filter,#period-filter')).toHaveCount(0);
+ await expect(page.locator('#overview-content')).toContainText('업무 KPI는 지표·단위·집계·기간·비교 기준을 정의한 뒤');
  await page.evaluate(()=>document.fonts.ready);fs.mkdirSync(qa,{recursive:true});await page.screenshot({path:path.join(qa,'dashboard-desktop.png'),fullPage:true});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
@@ -440,7 +441,7 @@ test('all 14 IN-SIGHT chart types render; save reopen export and delete',async({
  await chartType(page,'bar');const download=page.waitForEvent('download');await page.locator('#download-chart').click();expect((await download).suggestedFilename()).toBe('IN-SIGHT-bar.png');
  await page.locator('#save-insight').click();await page.locator('#save-form input[name=name]').fill('UI QA insight roundtrip');
  const savedResponse=page.waitForResponse(r=>r.url().endsWith('/api/visualizations')&&r.request().method()==='POST');await page.locator('#save-form button.primary').click();expect((await savedResponse).status()).toBe(201);await expect(page.locator('#modal')).not.toBeVisible();
- await route(page,'M03002','저장한 인사이트');const card=page.locator('.saved-card').filter({hasText:'UI QA insight roundtrip'});await expect(card.locator('canvas')).toBeVisible();
+ await route(page,'M03002','저장한 인사이트');const card=page.locator('.saved-card').filter({hasText:'UI QA insight roundtrip'});await expect(card.locator('canvas')).toHaveCount(0);await card.locator('[data-preview]').click();await expect(card.locator('canvas')).toBeVisible();
  await card.locator('[data-open]').click();await expect(page.locator('#chart-title')).toContainText('막대 차트');await expect(page.locator('#visual-x')).toHaveValue('region');
  await route(page,'M03002','저장한 인사이트');await card.locator('[data-delete]').click();await page.locator('#confirm-delete').click();await expect(card).toHaveCount(0);
 });
@@ -456,7 +457,7 @@ test('[TARGET API contract] C-BAP JSON and file inputs send the selected target'
  await page.locator('#json-form button.primary').click();await expect(page.locator('#modal')).not.toBeVisible();await expect(page.locator('#collection-page')).toContainText('UI C JSON contract');
  expect(mock.calls.find(c=>c.p==='/api/dbms/import').body).toMatchObject({connection_id:'ui-target',module:'C-BAP',rows:fixtureRows});
  await page.locator('#collection-import').click();await page.locator('#import-form input[name=name]').fill('UI C CSV contract');await page.locator('#import-file').setInputFiles({name:'fixture.csv',mimeType:'text/csv',buffer:Buffer.from('region,revenue\n서울,11\n부산,22\n')});
- await page.locator('#import-form button[type=submit]').click();await expect(page.locator('#modal')).not.toBeVisible();await route(page,'M04001','데이터 카탈로그');await page.locator('[data-catalog-search]').fill('UI C');await expect(page.locator('[data-catalog-table] tbody tr')).toHaveCount(2);
+ await expect(page.locator('#import-preview-state')).toContainText('파일 확인 완료');await page.locator('#import-confirm').check();await page.locator('#import-form button[type=submit]').click();await expect(page.locator('#modal')).not.toBeVisible();await route(page,'M04001','데이터 카탈로그');await page.locator('[data-catalog-search]').fill('UI C');await expect(page.locator('[data-catalog-table] tbody tr')).toHaveCount(2);
  await page.getByRole('button',{name:'UI C CSV contract',exact:true}).click();await expect(page.locator('#modal')).toContainText('서울');await expect(page.locator('#modal')).toContainText('11');
  await verifyUploadProgress(page);
 });
@@ -636,7 +637,7 @@ test('[R-only] explicit independent data and analysis without C-BAP or V-BAP',as
  await expect(page.locator('#navigation [data-page=M01001]')).toHaveCount(0);await expect(page.locator('#navigation [data-page=M03001]')).toHaveCount(0);
  await explicitDataset(page,'R-BAP','UI R independent');await route(page,'M02001','R-BAP 데이터 분석');await expect(page.locator('[data-dataset-choice][aria-pressed=true]')).toContainText('UI R independent');
  expect((await runAnalysis(page,'profile')).result.row_count).toBe(4);expect((await runAnalysis(page,'aggregate')).result.rows.map(r=>r.value).sort((a,b)=>a-b)).toEqual([30,70]);
- await page.locator('#analysis-import').click();await expect(page.locator('#modal')).toContainText('TARGET DB를 먼저 연결하세요');
+ await page.locator('#analysis-import').click();await expect(page.locator('#modal')).toContainText('TARGET 연결 불필요');await expect(page.locator('[name=storage_mode][value=direct]')).toBeChecked();await expect(page.locator('#import-file')).toBeVisible();
 });
 
 test('[V-only] explicit independent data and saved chart without C-BAP or R-BAP',async({page})=>{
@@ -644,5 +645,5 @@ test('[V-only] explicit independent data and saved chart without C-BAP or R-BAP'
  await explicitDataset(page,'V-BAP','UI V independent');await route(page,'M03001','V-BAP 시각화');await chartType(page,'bar');
  const values=await page.evaluate(()=>window.echarts.getInstanceByDom(document.querySelector('#studio-chart')).getOption().series[0].data);expect([...values].sort((a,b)=>a-b)).toEqual([30,70]);
  await page.locator('#save-insight').click();await page.locator('#save-form input[name=name]').fill('UI V independent chart');await page.locator('#save-form .primary').click();await expect(page.locator('#modal')).not.toBeVisible();
- await route(page,'M03002','저장한 인사이트');await expect(page.locator('.saved-card').filter({hasText:'UI V independent chart'}).locator('canvas')).toBeVisible();
+ await route(page,'M03002','저장한 인사이트');const card=page.locator('.saved-card').filter({hasText:'UI V independent chart'});await card.locator('[data-preview]').click();await expect(card.locator('canvas')).toBeVisible();
 });

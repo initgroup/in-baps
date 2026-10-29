@@ -12,6 +12,7 @@ from backend.auth import public_user, require_admin, require_user
 from backend.database import connection, get_record, json_document, list_dataset_metadata, list_records, put_record, query, utcnow
 from backend.target_database import materialize_dataset
 from backend.target_api import import_dataset_rows
+from backend.upload_preview import parse_upload, preview_upload
 
 router = APIRouter(prefix='/api')
 
@@ -112,42 +113,24 @@ def create_dataset(payload: DatasetInput, user=Depends(require_user)):
     return success(save_dataset(payload, user))
 
 
-@router.post('/datasets/import', status_code=201)
-async def import_dataset(file: UploadFile = File(...), name: str = Form(''), module: Literal['C-BAP', 'R-BAP', 'V-BAP'] = Form('C-BAP'), connection_id: str | None = Form(None), user=Depends(require_user)):
+@router.post('/datasets/preview')
+async def preview_dataset(file: UploadFile = File(...), module: Literal['C-BAP', 'R-BAP', 'V-BAP'] = Form('C-BAP'), user=Depends(require_user)):
     enabled(module)
     raw = await file.read(config.MAX_BYTES + 1)
-    if len(raw) > config.MAX_BYTES:
-        raise HTTPException(413, '파일은 10MiB 이하여야 합니다.')
+    parsed = await run_in_threadpool(parse_upload, raw, file.filename or 'dataset.csv')
+    return success(await run_in_threadpool(preview_upload, parsed))
+
+
+@router.post('/datasets/import', status_code=201)
+async def import_dataset(file: UploadFile = File(...), name: str = Form(''), module: Literal['C-BAP', 'R-BAP', 'V-BAP'] = Form('C-BAP'), connection_id: str | None = Form(None), preview_hash: str | None = Form(None), user=Depends(require_user)):
+    enabled(module)
+    raw = await file.read(config.MAX_BYTES + 1)
     filename = file.filename or 'dataset.csv'
-    extension = filename.rsplit('.', 1)[-1].lower()
+    parsed = await run_in_threadpool(parse_upload, raw, filename)
+    if preview_hash is not None and preview_hash != parsed['sha256']:
+        raise HTTPException(409, '미리보기 이후 파일이 변경되었습니다. 파일을 다시 확인하세요.')
     try:
-        try:
-            text = raw.decode('utf-8-sig')
-        except UnicodeDecodeError:
-            text = raw.decode('cp949')
-        if extension == 'json':
-            rows = json.loads(text)
-            if isinstance(rows, dict) and 'rows' in rows:
-                rows = rows['rows']
-        elif extension in ('csv', 'tsv'):
-            reader = csv.DictReader(io.StringIO(text), delimiter='\t' if extension == 'tsv' else ',')
-            if not reader.fieldnames or len(reader.fieldnames) != len(set(reader.fieldnames)):
-                raise HTTPException(422, '헤더가 없거나 컬럼 이름이 중복되었습니다.')
-            rows = []
-            for row in reader:
-                if None in row:
-                    raise HTTPException(422, '헤더보다 많은 값이 있는 행을 확인하세요.')
-                rows.append(row)
-                if len(rows) > config.MAX_ROWS:
-                    raise HTTPException(422, '최대 20,000행까지 가져올 수 있습니다.')
-        else:
-            raise HTTPException(422, 'CSV, TSV, JSON 파일을 선택하세요.')
-    except (UnicodeDecodeError, json.JSONDecodeError, csv.Error, RecursionError):
-        raise HTTPException(422, '파일 형식 또는 인코딩을 확인하세요. UTF-8/CP949 표 데이터를 지원합니다.')
-    if not isinstance(rows, list):
-        raise HTTPException(422, 'JSON은 행 객체의 배열 또는 {"rows": [...]} 형식이어야 합니다.')
-    try:
-        payload = DatasetInput(name=(name.strip() or filename)[:150], rows=rows, module=module, source='upload', connection_id=connection_id)
+        payload = DatasetInput(name=(name.strip() or filename)[:150], rows=parsed['rows'], module=module, source='upload', connection_id=connection_id)
     except ValidationError:
         raise HTTPException(422, 'JSON의 각 행은 컬럼 이름과 값을 가진 객체여야 합니다.')
     return success(await run_in_threadpool(save_dataset, payload, user))
