@@ -131,9 +131,14 @@ test('membership login roundtrip, role menus and explicit session extension',asy
  const cookie=(await context.cookies()).find(c=>c.name==='inbaps_session');expect(cookie.httpOnly).toBeTruthy();expect(cookie.sameSite).toBe('Lax');
  const extension=page.waitForResponse(r=>r.url().endsWith('/api/auth/activity'));await page.locator('#extend-session').click();expect((await extension).status()).toBe(200);
  await expect(page.locator('#session-remaining')).toHaveText(/\d+:\d{2}/);
+ await route(page,'M04001','데이터 카탈로그');
  await page.locator('#user-profile').click();await expect(page.locator('#login-form')).toBeVisible();
+ await expect(page).toHaveURL(/#M04001$/);
+ // A saved/deep menu URL on the login screen must not decide the new session's landing page.
+ await page.evaluate(()=>{location.hash='M02001';});await expect(page).toHaveURL(/#M02001$/);
  fs.mkdirSync(qa,{recursive:true});await page.screenshot({path:path.join(qa,'membership-login.png'),fullPage:true});
  const account=accounts.get(page);await page.locator('[name=username]').fill(account.username);await page.locator('[name=password]').fill(account.password);
+ const entryPages=[];page.on('request',request=>{if(request.url().includes('/static/pages/'))entryPages.push(new URL(request.url()).pathname);});
  let releaseEntry,entryStarted;const entryGate=new Promise(r=>releaseEntry=r),entryPending=new Promise(r=>entryStarted=r);
  await page.route('**/api/datasets',async r=>{entryStarted();await entryGate;await r.continue();});
  const login=page.waitForResponse(r=>r.url().endsWith('/api/auth/login'));await page.locator('#login-form button[type=submit]').click();expect((await login).status()).toBe(200);
@@ -141,7 +146,8 @@ test('membership login roundtrip, role menus and explicit session extension',asy
  const blocking=await page.locator('#page-loading').boundingBox();expect(Math.abs(blocking.x+blocking.width/2-720)).toBeLessThan(2);expect(Math.abs(blocking.y+blocking.height/2-500)).toBeLessThan(2);
  const before=page.url(),link=await page.locator('#help-button').boundingBox();await page.mouse.click(link.x+link.width/2,link.y+link.height/2);await expect(page.locator('#modal')).not.toBeVisible();await page.keyboard.press('Escape');await page.keyboard.press('/');await page.keyboard.press('Tab');expect(page.url()).toBe(before);await expect(page.locator('#page-loading')).toBeVisible();expect(await page.evaluate(()=>document.querySelector('#page-loading').contains(document.activeElement))).toBeTruthy();
  releaseEntry();await page.unrouteAll({behavior:'wait'});await expect(page.locator('#page-loading')).not.toBeVisible();
- await expect(page.locator('#overview-page')).toBeVisible();await expect(page.locator('#overview-content')).toContainText('분석할 데이터를 연결하세요');
+ await expect(page).toHaveURL(/#M00001$/);await expect(page.locator('#overview-page')).toBeVisible();await expect(page.locator('#overview-content')).toContainText('분석할 데이터를 연결하세요');
+ expect(entryPages,'Successful login enters the overview once without rendering the previous menu').toEqual(['/static/pages/M00001.html']);
  await page.route('**/api/datasets',r=>r.fulfill({status:503,json:{detail:'검증용 초기 데이터 조회 실패'}}));await page.reload();await expect(page.locator('#retry-entry')).toBeVisible();await expect(page.locator('#page-loading')).not.toBeVisible();await expect(page.locator('#login-form')).toHaveCount(0);await page.unroute('**/api/datasets');await page.locator('#retry-entry').click();await expect(page.locator('#overview-page')).toBeVisible();await expect(page.locator('#page-loading')).not.toBeVisible();
  issues.get(page).console=issues.get(page).console.filter(message=>!(message.includes('503')&&message.includes('/api/datasets')));
  await page.locator('#user-profile').click();await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(qa,'membership-mobile.png'),fullPage:true});

@@ -13,6 +13,7 @@
 
 - 제품명은 인법스 / `IN-BAPS`, 정식 명칭은 `INIT-Bigdata Analysis Platform System`이다. 로고 하단·로그인·앱 설명·문서에서 이 철자와 대소문자 표기를 유지한다. 모듈명은 `C-BAP`, `R-BAP`, `V-BAP`, 시각화 경험명은 `IN-SIGHT`다.
 - 로그인·개요·로딩·회원 영역의 서비스 명칭은 `인법스`로 통일한다. 기존 초기 관리자 표시명은 공개 응답에서 `인법스 관리자`로 호환 표시하며 사용자가 지정한 별도 이름과 계정 정보는 유지한다.
+- 명시적 로그인·회원가입 성공 시 이전 메뉴 주소와 관계없이 `M00001` 인법스 개요로 진입한다. 주소는 `history.replaceState`로 갱신해 hashchange에 따른 중복 진입·데이터 조회를 만들지 않는다. 이미 인증된 세션의 새로고침·메뉴 이동은 현재 메뉴를 유지한다.
 - 모듈 화면 제목 아래에 `Collection - Bigdata Analysis Platform`, `Research - Bigdata Analysis Platform`, `Visualization - Bigdata Analysis Platform`을 각각 표시한다. V-BAP 화면 제목은 `V-BAP 시각화`, 메뉴 보조명은 `데이터 뷰어`다.
 - C-BAP은 선택 가능한 데이터 공급 경로다. R-BAP이 C-BAP을 필수로 요구하거나 V-BAP이 C/R을 필수로 요구하도록 만들지 않는다.
 - 공통 카탈로그와 직접 파일 입력을 모두 유지한다. 모듈 활성 상태는 서버에서도 검증한다.
