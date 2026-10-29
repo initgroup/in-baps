@@ -221,7 +221,7 @@ Git 원격은 [initgroup/in-baps](https://github.com/initgroup/in-baps), 기본 
 
 사용자 도메인은 `https://www.inbaps.com`이며 `inbaps.com`과 Render 기본 주소도 지원합니다. Render 환경은 `BAPS_ALLOWED_HOSTS=inbaps.com,www.inbaps.com,in-baps.onrender.com`, `BAPS_PUBLIC_ORIGIN=https://www.inbaps.com`을 사용합니다. 운영 코드에서도 두 사용자 도메인을 명시적으로 허용해 기존 환경변수에서 발생하던 `Invalid host header`를 방지합니다. HTTPS 프록시 출처 검증과 CSRF 검증을 유지하며 임의 하위 도메인은 허용하지 않습니다. API는 현재 도메인의 `/api`를 호출하고 동일한 SYSTEM/TARGET Oracle 설정을 사용합니다. 세션 쿠키는 접속 호스트별로 발급되므로 주소를 바꾸면 해당 주소에서 로그인해야 합니다.
 
-2026-10-30 도메인 수정은 Python 회귀 112개·구문 검사·프론트 문법 검사·Oracle 오프라인 migration 계획을 통과했습니다. 새 도메인 회귀는 격리 SQLite에서 세 주소의 로그인·DB 조회·CSRF 보호·세션 연장·로그아웃과 비허용 호스트 차단을 검사합니다. 실제 Oracle 접속 검증과는 구분합니다.
+2026-10-30 도메인 수정은 Python 회귀 113개·구문 검사·프론트 문법 검사·Oracle 오프라인 migration 계획을 통과했습니다. 새 도메인 회귀는 격리 SQLite에서 세 주소의 로그인·DB 조회·CSRF 보호·세션 연장·로그아웃과 비허용 호스트 차단을 검사합니다. Render의 기존 개발 모드 설정에서도 등록 도메인을 허용합니다. 별도로 Render 기본 주소에서 실제 관리자 로그인·Oracle SYSTEM 조회·데이터셋 목록·저장된 TARGET 접속 테스트·로그아웃을 확인했습니다.
 
 ## 소스와 검증 기록
 

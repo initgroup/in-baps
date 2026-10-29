@@ -126,6 +126,22 @@ class BackendTests(unittest.TestCase):
                 with self.assertRaises(HTTPException):
                     same_origin(request('https://' + host, 'cross-site'))
 
+    def test_render_domains_with_legacy_development_setting(self):
+        from fastapi import FastAPI
+        from starlette.middleware.trustedhost import TrustedHostMiddleware
+        from starlette.requests import Request
+        from backend.api import router as api_router
+        with patch.dict(os.environ, {'BAPS_ALLOWED_HOSTS': 'localhost', 'BAPS_PUBLIC_ORIGIN': '',
+                                     'RENDER_EXTERNAL_HOSTNAME': 'in-baps.onrender.com'}), patch.object(config, 'ENVIRONMENT', 'development'):
+            deployed = FastAPI()
+            deployed.include_router(api_router)
+            deployed.add_middleware(TrustedHostMiddleware, allowed_hosts=config.allowed_hosts(), www_redirect=False)
+            for host in ('www.inbaps.com', 'inbaps.com', 'in-baps.onrender.com'):
+                self.assertEqual(TestClient(deployed, base_url='https://' + host).get('/api/health').status_code, 200)
+                same_origin(Request({'type': 'http', 'scheme': 'http', 'server': (host, 80), 'path': '/',
+                                     'root_path': '', 'query_string': b'', 'headers': [
+                                         (b'host', host.encode()), (b'origin', ('https://' + host).encode())]}))
+
     def test_independent_modules_and_roundtrip(self):
         old = config.ENABLED_MODULES
         try:

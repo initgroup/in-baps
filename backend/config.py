@@ -31,7 +31,7 @@ ENABLED_MODULES = {v.strip().upper() for v in setting('BAPS_MODULES', 'C-BAP,R-B
 def allowed_hosts():
     hosts = [host.strip() for host in setting('BAPS_ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',') if host.strip()]
     # Keep the service's registered domains working with older Render env values.
-    if ENVIRONMENT == 'production':
+    if ENVIRONMENT == 'production' or setting('RENDER_EXTERNAL_HOSTNAME'):
         hosts.extend(('inbaps.com', 'www.inbaps.com'))
     render_host = setting('RENDER_EXTERNAL_HOSTNAME')
     if render_host:

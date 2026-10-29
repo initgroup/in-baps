@@ -93,6 +93,8 @@ baps-db-export
 
 Render는 `BAPS_ALLOWED_HOSTS=inbaps.com,www.inbaps.com,in-baps.onrender.com`, `BAPS_PUBLIC_ORIGIN=https://www.inbaps.com`을 사용합니다. 공개 출처 미설정 시 `RENDER_EXTERNAL_HOSTNAME`을 사용합니다. 운영 코드도 두 사용자 도메인을 정확히 허용하며 HTTPS 종료 프록시 뒤의 같은 호스트 요청을 검증합니다. 임의 하위 도메인은 허용하지 않습니다. 도메인을 바꾸면 해당 호스트에서 다시 로그인하며 SYSTEM/TARGET Oracle 설정과 Wallet은 기존 서비스 설정을 공유합니다. wallet 파일은 Render의 비밀 파일로 별도 등록하고 `DB_WALLET_PATH`를 맞춥니다. 저장소나 정적 자산에 올리지 않습니다.
 
+Render의 기존 `BAPS_ENV=development` 설정에서도 `RENDER_EXTERNAL_HOSTNAME`이 있으면 등록 도메인과 HTTPS 프록시 출처 검증을 적용합니다. 신규 운영 환경은 위의 `production` 설정을 사용합니다.
+
 현재 Oracle Thin + TNS 별칭 접속은 Secret Files에 `tnsnames.ora`와 `ewallet.pem`을 각각 등록하고 `DB_WALLET_PATH=/etc/secrets`, `DB_ORACLE_MODE=thin`, `DB_MODE=cloud`로 설정합니다. `DB_WALLET_PASSWORD`는 DB 계정 비밀번호가 아닌 Wallet 비밀번호입니다. 환경변수만 등록해도 로컬 Wallet 파일이 Render에 전달되는 것은 아닙니다. 저장 후 새 배포가 완료되어야 변경이 적용됩니다.
 
 읽기 전용 DB 진단은 `python scripts/check_database.py`로 실행합니다. 설정의 존재 여부·Wallet 파일 존재 여부·Oracle 연결·회원/세션 테이블 접근만 확인하며 비밀번호와 설정값은 출력하지 않습니다. `/api/health`는 웹 프로세스의 생존 확인이므로 DB 접속 성공을 보장하지 않습니다.

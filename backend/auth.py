@@ -205,7 +205,7 @@ def same_origin(request):
     allowed = {str(request.base_url).rstrip('/')}
     # TLS terminates at Render. Accept HTTPS for this exact, explicitly allowed
     # request host even when the upstream ASGI connection uses HTTP.
-    if config.ENVIRONMENT == 'production' and request.url.hostname in config.allowed_hosts():
+    if (config.ENVIRONMENT == 'production' or config.setting('RENDER_EXTERNAL_HOSTNAME')) and request.url.hostname in config.allowed_hosts():
         allowed.add('https://' + request.url.netloc)
     public = config.public_origin()
     if public:
